@@ -136,7 +136,9 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <div class="field"><label for="vsel">Voice</label><select id="vsel"><option>Phone's default voice</option></select></div>
         <div class="field"><label for="rate">Speaking speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div class="ends"><span>Slower</span><span>Faster</span></div></div>
         <label class="check"><input type="checkbox" id="style"> Caller style: “Under the B… 7”</label>
+        <label class="check"><input type="checkbox" id="digits"> Say digits separately: “one, five… fifteen”</label>
         <label class="check"><input type="checkbox" id="twice"> Say each number twice</label>
+        <label class="check"><input type="checkbox" id="chime"> Play a chime before each call</label>
         <div class="row">
           <button class="btn" id="repeat">Say it again</button>
           <button class="btn" id="test">Test speaker</button>
@@ -175,7 +177,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true};
+let st={called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true,digits:true,chime:true};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 window.claude?.hot?.snapshot?.(()=>st);
@@ -202,14 +204,51 @@ function loadVoices(){
 }
 if(hasTTS){loadVoices();try{speechSynthesis.addEventListener('voiceschanged',loadVoices)}catch(e){speechSynthesis.onvoiceschanged=loadVoices}}
 
+const W=['zero','one','two','three','four','five','six','seven','eight','nine'];
+// "Under the B. One, five. ... 15. ... B, 15." Digits said one at a time so fifteen and fifty can't be confused.
 function phrase(n){
   const l=letter(n);
-  const first=st.style?`Under the ${l}. ${n}.`:`${l}. ${n}.`;
-  return st.twice?`${first} ... ${l}, ${n}.`:first;
+  const lead=st.style?`Under the ${l}.`:`${l}.`;
+  const body=st.digits&&n>=10?`${W[Math.floor(n/10)]}, ${W[n%10]}. ... ${n}.`:`${n}.`;
+  return st.twice?`${lead} ${body} ... ${l}, ${n}.`:`${lead} ${body}`;
 }
+// ---- chime: a soft ding-dong before each call. It also wakes a sleepy Bluetooth speaker
+// so the first word isn't cut off.
+let actx=null;
+function audio(){
+  try{
+    if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C()}
+    if(actx&&actx.state==='suspended')actx.resume();
+  }catch(e){}
+  return actx;
+}
+try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
+function chime(){
+  return new Promise(res=>{
+    const a=st.chime?audio():null;
+    if(!a){res();return}
+    try{
+      const t=a.currentTime+0.05;
+      [[784,0],[659,0.32]].forEach(([f,d])=>{
+        [[1,0.32],[2,0.06],[3,0.03]].forEach(([h,v])=>{
+          const o=a.createOscillator(),g=a.createGain();
+          o.type='sine';o.frequency.value=f*h;
+          g.gain.setValueAtTime(0.0001,t+d);
+          g.gain.exponentialRampToValueAtTime(v,t+d+0.012);
+          g.gain.exponentialRampToValueAtTime(0.0001,t+d+1.1);
+          o.connect(g);g.connect(a.destination);
+          o.start(t+d);o.stop(t+d+1.15);
+        });
+      });
+      setTimeout(res,1000);
+    }catch(e){res()}
+  });
+}
+async function announce(text){await chime();await say(text)}
 // Phones only allow speech after a tap: speak a silent utterance on the very first tap to unlock it.
 let unlocked=false,cur=null,heard=false;
 function unlock(){
+  audio();
   if(unlocked||!hasTTS)return;unlocked=true;
   try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;u.lang='en-US';speechSynthesis.speak(u)}catch(e){}
 }
@@ -270,7 +309,7 @@ function render(pop){
   $('play').textContent=running?'Pause':'Start auto';$('play').classList.toggle('run',running);
   $('autoPanel').hidden=!auto;
   document.querySelectorAll('#every .chip').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.s)===st.every));
-  $('rate').value=st.rate;$('twice').checked=st.twice;$('style').checked=st.style;
+  $('rate').value=st.rate;$('twice').checked=st.twice;$('style').checked=st.style;$('digits').checked=st.digits;$('chime').checked=st.chime;
   const rec=c.slice(-6,-1).reverse();
   $('recent').innerHTML=rec.length?rec.map(n=>{const l=letter(n);return `<div class="mini" style="--c:${COL[l][0]};--t:${COL[l][1]}">${l}<span>${n}</span></div>`}).join(''):'<span class="empty">Earlier calls show up here.</span>';
   const set=new Set(c);
@@ -299,7 +338,7 @@ async function callNext(){
   if(window.crypto?.getRandomValues){const a=new Uint32Array(1);crypto.getRandomValues(a);i=a[0]%pool.length}else i=Math.floor(Math.random()*pool.length);
   const n=pool[i];st.called.push(n);save();render(true);wake();
   const id=++callId;
-  if(voiceOn())await say(phrase(n));
+  if(voiceOn())await announce(phrase(n));
   if(id!==callId)return;
   if(running)countdown();
 }
@@ -309,13 +348,15 @@ $('play').addEventListener('click',()=>{if(running){stopAuto();if(hasTTS)speechS
 $('undo').addEventListener('click',()=>{if(!st.called.length)return;stopAuto();if(hasTTS)speechSynthesis.cancel();st.called.pop();save();render(false)});
 $('voice').addEventListener('click',()=>{st.voice=!st.voice;save();render(false);const n=st.called[st.called.length-1];if(st.voice&&n)say(phrase(n))});
 $('say').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)say(phrase(n))});
-$('repeat').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)say(phrase(n));else say('No numbers called yet.')});
-$('test').addEventListener('click',()=>say("Hello everyone, welcome to Bingo Slop! Eyes down, here we go."));
+$('repeat').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)announce(phrase(n));else say('No numbers called yet.')});
+$('test').addEventListener('click',()=>announce("Hello everyone, welcome to Bingo Slop! Eyes down, here we go."));
 $('mode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.mode=b.dataset.m;if(st.mode!=='auto')stopAuto();save();render(false)});
 $('every').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.every=Number(b.dataset.s);save();if(!st.every)stopAuto();else if(running)countdown();else render(false)});
 $('vsel').addEventListener('change',e=>{st.vname=e.target.value;save();say('This is how I will sound.')});
-$('rate').addEventListener('change',e=>{st.rate=Number(e.target.value);save();say('Under the B. 7.')});
+$('rate').addEventListener('change',e=>{st.rate=Number(e.target.value);save();say(phrase(15))});
 $('twice').addEventListener('change',e=>{st.twice=e.target.checked;save()});
+$('digits').addEventListener('change',e=>{st.digits=e.target.checked;save();if(st.digits)say(phrase(15))});
+$('chime').addEventListener('change',e=>{st.chime=e.target.checked;save();if(st.chime)chime()});
 $('style').addEventListener('change',e=>{st.style=e.target.checked;save()});
 $('pats').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.pat=b.dataset.p;save();render(false)});
 const dlg=$('dlg');
