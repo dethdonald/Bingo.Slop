@@ -476,9 +476,19 @@ function phrase(n){
 // ---- chime: a soft ding-dong before each call. It also wakes a sleepy Bluetooth speaker
 // so the first word isn't cut off.
 let actx=null;
+// Keep the sound connection open with an inaudible signal. When casting or using Bluetooth,
+// the phone drops the audio link during silence and clips short sounds like the tick.
+function keepAlive(a){
+  try{
+    const len=a.sampleRate*2,buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*0.0006;
+    const src=a.createBufferSource(),g=a.createGain();src.buffer=buf;src.loop=true;g.gain.value=0.5;
+    src.connect(g);g.connect(a.destination);src.start();
+  }catch(e){}
+}
 function audio(){
   try{
-    if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C()}
+    if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C){actx=new C();keepAlive(actx)}}
     if(actx&&actx.state==='suspended')actx.resume();
   }catch(e){}
   return actx;
@@ -510,12 +520,15 @@ function tick(last){
   const a=st.tick?audio():null;
   if(!a)return;
   try{
-    const t=a.currentTime+0.01,f=last?1650:1150,v=last?0.22:0.13;
-    const o=a.createOscillator(),g=a.createGain(),hp=a.createBiquadFilter();
-    o.type='triangle';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*0.6,t+0.06);
-    hp.type='highpass';hp.frequency.value=500;
-    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(v,t+0.004);g.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
-    o.connect(hp);hp.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.1);
+    // a wooden "tock": a pitched body plus a short click, long enough to survive TV casting
+    const t=a.currentTime+0.01,f=last?1100:760,v=last?0.32:0.22,out=a.createGain();
+    out.gain.value=1;out.connect(a.destination);
+    [[f,'triangle',v,0.16],[f*2.02,'sine',v*0.35,0.08]].forEach(([fr,type,vol,len])=>{
+      const o=a.createOscillator(),g=a.createGain();
+      o.type=type;o.frequency.setValueAtTime(fr,t);o.frequency.exponentialRampToValueAtTime(fr*0.72,t+len);
+      g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.005);g.gain.exponentialRampToValueAtTime(0.0001,t+len);
+      o.connect(g);g.connect(out);o.start(t);o.stop(t+len+0.02);
+    });
   }catch(e){}
 }
 async function announce(text){await chime();await say(text)}
