@@ -60,13 +60,30 @@ box-shadow:0 18px 30px -12px rgba(0,0,0,.6),inset 0 -10px 24px rgba(0,0,0,.25)}
 .call:disabled{background:#6f8c82;color:#dfe;box-shadow:none;cursor:default}
 .call:focus-visible,.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #fff;outline-offset:3px}
 .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
-.btn{flex:1 1 0;min-height:52px;border-radius:14px;border:1.5px solid var(--line);background:rgba(255,255,255,.07);font-weight:700;font-size:17px;padding:0 12px;white-space:nowrap}
+.btn{flex:1 1 130px;min-height:52px;border-radius:14px;border:1.5px solid var(--line);background:rgba(255,255,255,.07);font-weight:700;font-size:17px;padding:0 12px;white-space:nowrap}
 .btn[aria-pressed=true]{background:#fff;color:var(--felt2)}
 .btn.run{background:var(--I);border-color:var(--I)}
 .btn:disabled{opacity:.4;cursor:default}
 h2{font:600 19px/1.2 Rubik,sans-serif;margin:24px 0 10px}
 .panel{margin-top:18px;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:20px;padding:16px}
-.panel h2{margin-top:0}
+.panel{padding:6px 16px;transition:background-color .4s}
+.panel.open{background:rgba(0,0,0,.32)}
+.stoggle{width:100%;display:flex;align-items:center;gap:12px;min-height:58px;background:none;border:0;padding:0;font:600 19px/1.2 Rubik,sans-serif;text-align:left}
+.stoggle span{flex:1}
+.stoggle:focus-visible{outline:3px solid #fff;outline-offset:4px;border-radius:10px}
+.gear{width:30px;height:30px;color:var(--gold);transition:transform .8s cubic-bezier(.34,1.56,.64,1)}
+.stoggle:active .gear{transform:scale(.85)}
+.chev{width:26px;height:26px;color:var(--soft);transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
+.panel.open .gear{transform:rotate(240deg)}
+.panel.open .chev{transform:rotate(180deg)}
+.sbody{display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s cubic-bezier(.22,1,.36,1)}
+.panel.open .sbody{grid-template-rows:1fr}
+.sinner{overflow:hidden;min-height:0}
+.sinner>*:first-child{margin-top:10px}
+.sinner>*:last-child{margin-bottom:12px}
+.sinner>*{opacity:0;transform:translateY(-14px) scale(.97);transition:opacity .2s,transform .2s}
+.panel.open .sinner>*{opacity:1;transform:none;transition:opacity .35s ease calc(var(--i,0)*55ms + 120ms),transform .6s cubic-bezier(.34,1.56,.64,1) calc(var(--i,0)*55ms + 120ms)}
+@media(prefers-reduced-motion:reduce){.gear,.chev,.sbody,.sinner>*,.panel.open .sinner>*{transition:none}}
 .field{margin-bottom:16px}
 .field>label,.field>span{display:block;font-weight:700;margin-bottom:6px}
 select{width:100%;min-height:50px;border-radius:12px;border:1.5px solid var(--line);background:#0a3a2e;padding:0 12px;font-size:16px}
@@ -126,12 +143,14 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
       <div class="row">
         <button class="btn" id="undo">Undo last</button>
         <button class="btn" id="voice" aria-pressed="false">Read aloud</button>
+        <button class="btn" id="repeat" hidden>Say it again</button>
         <button class="btn" id="play" hidden>Start auto</button>
         <button class="btn" id="reset">New game</button>
       </div>
 
       <div class="panel" id="autoPanel" hidden>
-        <h2>Voice caller settings</h2>
+        <button class="stoggle" id="stoggle" aria-expanded="false" aria-controls="sbody"><svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.3 2h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8c.1.6.1 1.2 0 1.8l2 1.8-1.7 2.9-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6c-.6-.2-1.2-.5-1.7-.9l-2.5.9-1.7-2.9 2-1.8a5.6 5.6 0 0 1 0-1.8l-2-1.8 1.7-2.9 2.5.9c.5-.4 1.1-.7 1.7-.9zM12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z" transform="translate(0 1.5)"/></svg><span>Voice settings</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="sbody" id="sbody"><div class="sinner" id="sinner">
         <div class="field"><span>Call the next number by itself</span><div class="chips" id="every"></div></div>
         <div class="field"><label for="vsel">Voice</label><select id="vsel"><option>Phone's default voice</option></select></div>
         <div class="field"><label for="rate">Speaking speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div class="ends"><span>Slower</span><span>Faster</span></div></div>
@@ -140,11 +159,11 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <label class="check"><input type="checkbox" id="twice"> Say each number twice</label>
         <label class="check"><input type="checkbox" id="chime"> Play a chime before each call</label>
         <div class="row">
-          <button class="btn" id="repeat">Say it again</button>
           <button class="btn" id="test">Test speaker</button>
         </div>
         <p class="vstat" id="vstat" role="status">Tap Test speaker to check the sound.</p>
         <p class="note">Connect your phone to the Bluetooth speaker first. The voice plays through whatever your phone uses for sound. No sound on an iPhone? Turn off silent mode and turn the volume up.</p>
+        </div></div>
       </div>
 
       <h2>Last called</h2>
@@ -177,7 +196,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true,digits:true,chime:true};
+let st={setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true,digits:true,chime:true};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 window.claude?.hot?.snapshot?.(()=>st);
@@ -254,7 +273,7 @@ function unlock(){
 }
 document.addEventListener('click',unlock,{capture:true});
 document.addEventListener('touchend',unlock,{capture:true});
-function vstat(msg){$('vstat').textContent=msg}
+function vstat(msg,warn){$('vstat').textContent=msg;if(warn&&st.mode==='auto')setOpen(true)}
 // speaks text; resolves when finished (or after a safety timeout)
 function say(text){
   return new Promise(res=>{
@@ -268,11 +287,11 @@ function say(text){
         if(v){u.voice=v;u.lang=v.lang}else u.lang='en-US';
         u.rate=Number(st.rate)||0.85;u.volume=1;u.pitch=1;
         u.onstart=()=>{if(!heard){heard=true;vstat('Voice is working.')}};
-        u.onend=fin;u.onerror=e=>{if(e&&e.error&&e.error!=='interrupted'&&e.error!=='canceled')vstat('The voice hit an error ('+e.error+'). Tap Test speaker to try again.');fin()};
+        u.onend=fin;u.onerror=e=>{if(e&&e.error&&e.error!=='interrupted'&&e.error!=='canceled')vstat('The voice hit an error ('+e.error+'). Tap Test speaker to try again.',1);fin()};
         cur=u; // keep a reference so the browser doesn't drop it mid-sentence
         speechSynthesis.resume();
         speechSynthesis.speak(u);
-        setTimeout(()=>{if(!heard)vstat('No voice started. Check silent mode and volume, then tap Test speaker.')},2500);
+        setTimeout(()=>{if(!heard)vstat('No voice started. Check silent mode and volume, then tap Test speaker.',1)},2500);
         setTimeout(fin,Math.max(4000,text.length*160/u.rate));
       }catch(e){vstat('The voice could not start in this browser.');fin()}
     };
@@ -307,7 +326,7 @@ function render(pop){
   $('voice').hidden=auto;$('voice').setAttribute('aria-pressed',st.voice);
   $('play').hidden=!auto||!st.every||done;
   $('play').textContent=running?'Pause':'Start auto';$('play').classList.toggle('run',running);
-  $('autoPanel').hidden=!auto;
+  $('autoPanel').hidden=!auto;$('repeat').hidden=!auto;
   document.querySelectorAll('#every .chip').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.s)===st.every));
   $('rate').value=st.rate;$('twice').checked=st.twice;$('style').checked=st.style;$('digits').checked=st.digits;$('chime').checked=st.chime;
   const rec=c.slice(-6,-1).reverse();
@@ -359,6 +378,10 @@ $('digits').addEventListener('change',e=>{st.digits=e.target.checked;save();if(s
 $('chime').addEventListener('change',e=>{st.chime=e.target.checked;save();if(st.chime)chime()});
 $('style').addEventListener('change',e=>{st.style=e.target.checked;save()});
 $('pats').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.pat=b.dataset.p;save();render(false)});
+[...$('sinner').children].forEach((c,i)=>c.style.setProperty('--i',i));
+function setOpen(o){st.setOpen=o;save();$('autoPanel').classList.toggle('open',o);$('stoggle').setAttribute('aria-expanded',o);$('sinner').inert=!o}
+$('stoggle').addEventListener('click',()=>setOpen(!st.setOpen));
+setOpen(!!st.setOpen);
 const dlg=$('dlg');
 $('reset').addEventListener('click',()=>{stopAuto();dlg.classList.add('open');$('no').focus()});
 $('no').addEventListener('click',()=>dlg.classList.remove('open'));
