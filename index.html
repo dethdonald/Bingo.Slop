@@ -149,7 +149,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 .bb .l{font:800 calc(var(--s)*.15) Rubik,sans-serif;color:var(--cl)}
 .bb .n{font:800 calc(var(--s)*.3) Rubik,sans-serif;letter-spacing:-.03em}
 .bb .h{font:700 calc(var(--s)*.07)/1.2 "Atkinson Hyperlegible",sans-serif;color:#444;padding:0 8%}
-.pnow .bb{--s:min(34vh,22vw)}
+.pnow .bb{--s:min(27vh,19vw)}
 .pmeta{display:flex;justify-content:space-between;gap:1vw;font-size:min(1.7vw,3.4vh);color:var(--soft);white-space:nowrap}
 .pmeta b{color:#fff}
 .ppat{display:flex;gap:1.4vw;align-items:center;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:2vh;padding:1.6vh 1.2vw}
@@ -167,10 +167,13 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 .flybg.on{opacity:1}
 .fly{position:absolute;left:50%;top:50%;display:none;pointer-events:none;z-index:3}
 .fly .bb{--s:min(62vh,44vw)}
-.pbar{position:absolute;left:50%;bottom:max(2.6vh,env(safe-area-inset-bottom));transform:translate(-50%,0);display:flex;gap:10px;padding:10px;border-radius:18px;background:rgba(0,0,0,.6);z-index:4;transition:opacity .35s,transform .35s}
-.pbar.hide{opacity:0;transform:translate(-50%,140%);pointer-events:none}
+.pctrl{display:flex;gap:.8vw;align-items:stretch}
+.pcall{margin:0;flex:1;min-height:max(52px,9vh);border-radius:1.6vh;font-size:max(18px,min(1.9vw,3.8vh));box-shadow:0 .6vh 0 var(--goldsh)}
+.pctrl .pbtn{min-height:max(52px,9vh)}
+.pexit{position:absolute;top:max(6px,env(safe-area-inset-top));left:max(6px,env(safe-area-inset-left));z-index:5;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;padding:0;opacity:.75}
+.pexit:hover,.pexit:focus-visible{opacity:1;outline:2px solid var(--gold)}
+.pexit svg{width:20px;height:20px}
 .pbtn{min-height:48px;padding:0 20px;border-radius:12px;border:1.5px solid var(--line);background:rgba(255,255,255,.1);font-weight:700;font-size:17px;white-space:nowrap}
-.pbtn.go{background:var(--gold);border-color:var(--gold);color:#1a1300}
 .pbtn[hidden]{display:none}
 .prot{position:absolute;inset:0;z-index:6;display:none;place-content:center;justify-items:center;gap:16px;text-align:center;padding:24px;background:rgba(3,20,15,.92);font-size:20px}
 @media(orientation:portrait){.prot.show{display:grid}.proj{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.pside{flex-direction:row;flex-wrap:wrap;align-items:center}.pnow{flex:none}.pnow .bb{--s:22vw}.prow{gap:.4vw}.pc{font-size:2.6vw}.pl{font-size:5vw}}
@@ -267,14 +270,14 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
     <div class="pmeta"><span id="pcount"></span><span id="pnext"></span></div>
     <div class="ppat"><div class="pgrid" id="pgrid"></div><div class="pptext"><small>Now playing</small><b id="ppat"></b><span id="pdesc"></span></div></div>
     <div class="precent" id="precent"></div>
+    <div class="pctrl">
+      <button class="call pcall" id="pNext"><span class="fill" id="pfill" aria-hidden="true"><svg class="wave back" viewBox="0 0 20 200" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H10Q20 12.5 10 25T10 50T10 75T10 100T10 125T10 150T10 175T10 200H0Z"/></svg><svg class="wave front" viewBox="0 0 20 200" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H10Q20 12.5 10 25T10 50T10 75T10 100T10 125T10 150T10 175T10 200H0Z"/></svg><span class="water"></span></span><span class="lbl" id="pNextLbl">Next number</span></button>
+      <button class="pbtn" id="pPlay">Pause</button>
+    </div>
   </aside>
   <div class="flybg" id="flybg"></div>
   <div class="fly" id="fly"></div>
-  <div class="pbar" id="pbar">
-    <button class="pbtn go" id="pNext">Next number</button>
-    <button class="pbtn" id="pPlay">Pause</button>
-    <button class="pbtn" id="pExit">Exit</button>
-  </div>
+  <button class="pexit" id="pExit" aria-label="Exit projector view" title="Exit projector view"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button>
   <div class="prot" id="prot"><p>Turn your phone sideways so the board fills the projector.</p><button class="pbtn" id="protOk">Got it</button></div>
 </div>
 <div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dt">
@@ -455,11 +458,13 @@ async function wake(){try{if(!lock&&navigator.wakeLock){lock=await navigator.wak
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&st.called.length)wake()});
 
 function fillStart(sec){
-  const f=$('fill');f.classList.remove('drain','on');f.style.transition='none';
-  void f.offsetHeight;
-  f.style.transition=`transform ${sec}s linear`;f.classList.add('on');
+  document.querySelectorAll('.fill').forEach(f=>{
+    f.classList.remove('drain','on');f.style.transition='none';
+    void f.offsetHeight;
+    f.style.transition=`transform ${sec}s linear`;f.classList.add('on');
+  });
 }
-function fillDrain(){const f=$('fill');if(f.classList.contains('on')){f.style.transition='';f.classList.remove('on');f.classList.add('drain')}}
+function fillDrain(){document.querySelectorAll('.fill').forEach(f=>{if(f.classList.contains('on')){f.style.transition='';f.classList.remove('on');f.classList.add('drain')}})}
 function clearTimer(){if(timer){clearInterval(timer);timer=null}fillDrain()}
 function stopAuto(){running=false;clearTimer();render(false)}
 function countdown(){
@@ -538,7 +543,7 @@ function projRender(){
   $('pgrid').innerHTML=Array.from({length:25},(_,i)=>`<i class="${i===12&&st.pat!=='Full card'&&!on.has(12)?'free':on.has(i)?'on':''}"></i>`).join('');
   $('ppat').textContent=st.pat;$('pdesc').textContent=PAT_DESC[st.pat]||'';
   const auto=st.mode==='auto';
-  $('pNext').textContent=st.called.length>=75?'All called':c.length?'Next number':'Start calling';$('pNext').disabled=c.length>=75;
+  $('pNextLbl').textContent=st.called.length>=75?'All called':c.length?'Next number':'Start calling';$('pNext').disabled=c.length>=75;
   $('pPlay').hidden=!auto||!st.every;$('pPlay').textContent=running?'Pause':'Start auto';
 }
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -571,12 +576,11 @@ async function projLand(n,since){
   fly.style.display='none';pending=0;projRender();
   cell.classList.remove('pop');void cell.offsetWidth;cell.classList.add('pop');
 }
-function showBar(){$('pbar').classList.remove('hide');clearTimeout(barT);barT=setTimeout(()=>$('pbar').classList.add('hide'),4000)}
 function openProj(){
   projOpen=true;pending=0;$('proj').hidden=false;$('fly').style.display='none';$('flybg').classList.remove('on');
   if(matchMedia('(orientation: portrait)').matches)$('prot').classList.add('show');
   try{const r=document.documentElement.requestFullscreen?.();r&&r.then(()=>{try{screen.orientation?.lock?.('landscape').catch(()=>{})}catch(e){}}).catch(()=>{})}catch(e){}
-  projRender();showBar();wake();
+  projRender();wake();
 }
 function closeProj(){
   projOpen=false;pending=0;$('proj').hidden=true;$('fly').style.display='none';
@@ -584,11 +588,9 @@ function closeProj(){
 }
 $('projBtn').addEventListener('click',openProj);
 $('pExit').addEventListener('click',closeProj);
-$('pNext').addEventListener('click',()=>{showBar();$('call').click()});
-$('pPlay').addEventListener('click',()=>{showBar();$('play').click();projRender()});
+$('pNext').addEventListener('click',()=>$('call').click());
+$('pPlay').addEventListener('click',()=>{$('play').click();projRender()});
 $('protOk').addEventListener('click',()=>$('prot').classList.remove('show'));
-$('proj').addEventListener('click',e=>{if(!e.target.closest('.pbar'))showBar()});
-$('proj').addEventListener('mousemove',showBar);
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&projOpen){}});
 const dlg=$('dlg');
 $('reset').addEventListener('click',()=>{stopAuto();dlg.classList.add('open');$('no').focus()});
