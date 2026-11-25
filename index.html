@@ -345,7 +345,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <label class="check vonly"><input type="checkbox" id="digits"> Say digits separately: “one, five… fifteen”</label>
         <label class="check vonly"><input type="checkbox" id="twice"> Say each number twice</label>
         <label class="check vonly"><input type="checkbox" id="chime"> Play a chime before each call</label>
-        <label class="check vonly"><input type="checkbox" id="tick"> Ticking sound while counting down</label>
+        <div class="field vonly"><span>Countdown sound</span><div class="chips" id="cdsnd"><button class="chip" data-v="tick">Tick</button><button class="chip" data-v="cage">Spinning cage</button><button class="chip" data-v="off">Off</button></div></div>
         <div class="row vonly">
           <button class="btn" id="test">Test speaker</button>
         </div>
@@ -438,8 +438,9 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true};
+let st={history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
+if(!st.cdSound)st.cdSound=st.tick===false?'off':'tick';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 window.claude?.hot?.snapshot?.(()=>st);
 const $=id=>document.getElementById(id);
@@ -516,8 +517,50 @@ function chime(){
   });
 }
 // ---- countdown tick: a soft wooden "tick" each second, a brighter "tock" for the last three
+// ---- spinning cage sound: drum rumble + plastic balls clacking, building toward the call
+let cage=null;
+function noiseBuf(a,sec){const len=a.sampleRate*sec,b=a.createBuffer(1,len,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;return b}
+function clack(a,out,t,v){
+  // one ball knocking another: a tiny bright noise burst with a hollow plastic "tock"
+  const n=a.createBufferSource(),bp=a.createBiquadFilter(),g=a.createGain();
+  n.buffer=cage.nb;bp.type='bandpass';bp.frequency.value=1800+Math.random()*2600;bp.Q.value=3;
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.035);
+  n.connect(bp);bp.connect(g);g.connect(out);n.start(t,Math.random()*0.5);n.stop(t+0.05);
+  const o=a.createOscillator(),og=a.createGain();o.type='sine';o.frequency.value=900+Math.random()*900;
+  og.gain.setValueAtTime(v*0.6,t);og.gain.exponentialRampToValueAtTime(0.0001,t+0.05);
+  o.connect(og);og.connect(out);o.start(t);o.stop(t+0.06);
+}
+function cageStart(){
+  const a=st.cdSound==='cage'?audio():null;if(!a||cage)return;
+  try{
+    const out=a.createGain();out.gain.value=0;out.connect(a.destination);
+    out.gain.setTargetAtTime(1,a.currentTime,0.15);
+    const nb=noiseBuf(a,1),rum=a.createBufferSource(),lp=a.createBiquadFilter(),rg=a.createGain();
+    rum.buffer=nb;rum.loop=true;lp.type='bandpass';lp.frequency.value=260;lp.Q.value=0.7;rg.gain.value=0.05;
+    rum.connect(lp);lp.connect(rg);rg.connect(out);rum.start();
+    // the drum's turn gives the rumble a slow swell
+    const lfo=a.createOscillator(),lg=a.createGain();lfo.frequency.value=1.2;lg.gain.value=0.03;lfo.connect(lg);lg.connect(rg.gain);lfo.start();
+    cage={out,rum,lfo,rg,nb,next:a.currentTime};
+    cage.iv=setInterval(()=>{
+      if(!cage)return;
+      const inten=Math.max(0.15,tumbIntensity()),now=a.currentTime;
+      lfo.frequency.setTargetAtTime(1+inten*3,now,0.3);rg.gain.setTargetAtTime(0.04+inten*0.09,now,0.3);
+      while(cage.next<now+0.12){
+        const gap=0.09-inten*0.065+Math.random()*0.06;
+        cage.next=Math.max(cage.next+gap,now);
+        clack(a,out,cage.next,(0.04+inten*0.12)*(0.4+Math.random()*0.6));
+        if(Math.random()<inten*0.5)clack(a,out,cage.next+0.012+Math.random()*0.02,0.05*inten);
+      }
+    },40);
+  }catch(e){cage=null}
+}
+function cageStop(){
+  if(!cage)return;const c=cage;cage=null;clearInterval(c.iv);
+  try{const a=audio();c.out.gain.setTargetAtTime(0,a.currentTime,0.12);setTimeout(()=>{try{c.rum.stop();c.lfo.stop();c.out.disconnect()}catch(e){}},700)}catch(e){}
+}
+function cagePreview(){if(cage)return;cageStart();setTimeout(()=>{if(!(running&&timer))cageStop()},2500)}
 function tick(last){
-  const a=st.tick?audio():null;
+  const a=st.cdSound==='tick'?audio():null;
   if(!a)return;
   try{
     // a wooden "tock": a pitched body plus a short click, long enough to survive TV casting
@@ -709,7 +752,7 @@ function render(pop){
   $('tumbMain').hidden=$('tumbProj').hidden=!(auto&&st.every);
   applySkin();
   document.querySelectorAll('#every .chip').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.s)===st.every));
-  $('rate').value=st.rate;$('twice').checked=st.twice;$('style').checked=st.style;$('digits').checked=st.digits;$('chime').checked=st.chime;$('tick').checked=st.tick;
+  $('rate').value=st.rate;$('twice').checked=st.twice;$('style').checked=st.style;$('digits').checked=st.digits;$('chime').checked=st.chime;document.querySelectorAll('#cdsnd .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===st.cdSound));
   const rec=c.slice(-6,-1).reverse();
   $('recent').innerHTML=rec.length?rec.map(n=>{const l=letter(n);return `<div class="mini" style="--c:${COL[l][0]};--t:${COL[l][1]}">${l}<span>${n}</span></div>`}).join(''):'<span class="empty">Earlier calls show up here.</span>';
   const set=new Set(c);
@@ -732,12 +775,13 @@ function fillStart(sec){
   });
 }
 function fillDrain(){document.querySelectorAll('.fill').forEach(f=>{if(f.classList.contains('on')){f.style.transition='';f.classList.remove('on');f.classList.add('drain')}})}
-function clearTimer(){if(timer){clearInterval(timer);timer=null}cdStart=0;fillDrain()}
+function clearTimer(){if(timer){clearInterval(timer);timer=null}cdStart=0;fillDrain();cageStop()}
 function stopAuto(){running=false;clearTimer();render(false)}
 function countdown(){
   clearTimer();
   if(!running||st.mode!=='auto'||!st.every||st.called.length>=75){if(st.called.length>=75)running=false;render(false);return}
   left=st.every;render(false);tick(left<=3);fillStart(st.every);
+  cageStart();
   timer=setInterval(()=>{left--;if(left<=0){clearTimer();callNext()}else{render(false);tick(left<=3)}},1000);
 }
 async function callNext(){
@@ -771,7 +815,10 @@ $('rate').addEventListener('change',e=>{st.rate=Number(e.target.value);save();sa
 $('twice').addEventListener('change',e=>{st.twice=e.target.checked;save()});
 $('digits').addEventListener('change',e=>{st.digits=e.target.checked;save();if(st.digits)sayCall(15)});
 $('chime').addEventListener('change',e=>{st.chime=e.target.checked;save();if(st.chime)chime()});
-$('tick').addEventListener('change',e=>{st.tick=e.target.checked;save();if(st.tick){tick(false);setTimeout(()=>tick(false),500);setTimeout(()=>tick(true),1000)}});
+$('cdsnd').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.cdSound=b.dataset.v;st.tick=st.cdSound==='tick';save();render(false);
+  if(cage&&st.cdSound!=='cage')cageStop();
+  if(st.cdSound==='cage'){if(running&&timer)cageStart();else cagePreview()}
+  else if(st.cdSound==='tick'){tick(false);setTimeout(()=>tick(false),500);setTimeout(()=>tick(true),1000)}});
 $('style').addEventListener('change',e=>{st.style=e.target.checked;save()});
 $('pats').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.pat=b.dataset.p;save();render(false)});
 [...$('sinner').children].forEach((c,i)=>c.style.setProperty('--i',i));
