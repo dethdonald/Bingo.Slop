@@ -158,6 +158,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <label class="check"><input type="checkbox" id="digits"> Say digits separately: “one, five… fifteen”</label>
         <label class="check"><input type="checkbox" id="twice"> Say each number twice</label>
         <label class="check"><input type="checkbox" id="chime"> Play a chime before each call</label>
+        <label class="check"><input type="checkbox" id="tick"> Ticking sound while counting down</label>
         <div class="row">
           <button class="btn" id="test">Test speaker</button>
         </div>
@@ -196,7 +197,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true,digits:true,chime:true};
+let st={setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 window.claude?.hot?.snapshot?.(()=>st);
@@ -263,6 +264,19 @@ function chime(){
     }catch(e){res()}
   });
 }
+// ---- countdown tick: a soft wooden "tick" each second, a brighter "tock" for the last three
+function tick(last){
+  const a=st.tick?audio():null;
+  if(!a)return;
+  try{
+    const t=a.currentTime+0.01,f=last?1650:1150,v=last?0.22:0.13;
+    const o=a.createOscillator(),g=a.createGain(),hp=a.createBiquadFilter();
+    o.type='triangle';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*0.6,t+0.06);
+    hp.type='highpass';hp.frequency.value=500;
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(v,t+0.004);g.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
+    o.connect(hp);hp.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.1);
+  }catch(e){}
+}
 async function announce(text){await chime();await say(text)}
 // Phones only allow speech after a tap: speak a silent utterance on the very first tap to unlock it.
 let unlocked=false,cur=null,heard=false;
@@ -328,7 +342,7 @@ function render(pop){
   $('play').textContent=running?'Pause':'Start auto';$('play').classList.toggle('run',running);
   $('autoPanel').hidden=!auto;$('repeat').hidden=!auto;
   document.querySelectorAll('#every .chip').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.s)===st.every));
-  $('rate').value=st.rate;$('twice').checked=st.twice;$('style').checked=st.style;$('digits').checked=st.digits;$('chime').checked=st.chime;
+  $('rate').value=st.rate;$('twice').checked=st.twice;$('style').checked=st.style;$('digits').checked=st.digits;$('chime').checked=st.chime;$('tick').checked=st.tick;
   const rec=c.slice(-6,-1).reverse();
   $('recent').innerHTML=rec.length?rec.map(n=>{const l=letter(n);return `<div class="mini" style="--c:${COL[l][0]};--t:${COL[l][1]}">${l}<span>${n}</span></div>`}).join(''):'<span class="empty">Earlier calls show up here.</span>';
   const set=new Set(c);
@@ -345,8 +359,8 @@ function stopAuto(){running=false;clearTimer();render(false)}
 function countdown(){
   clearTimer();
   if(!running||st.mode!=='auto'||!st.every||st.called.length>=75){if(st.called.length>=75)running=false;render(false);return}
-  left=st.every;render(false);
-  timer=setInterval(()=>{left--;if(left<=0){clearTimer();callNext()}else render(false)},1000);
+  left=st.every;render(false);tick(left<=3);
+  timer=setInterval(()=>{left--;if(left<=0){clearTimer();callNext()}else{render(false);tick(left<=3)}},1000);
 }
 async function callNext(){
   clearTimer();
@@ -376,6 +390,7 @@ $('rate').addEventListener('change',e=>{st.rate=Number(e.target.value);save();sa
 $('twice').addEventListener('change',e=>{st.twice=e.target.checked;save()});
 $('digits').addEventListener('change',e=>{st.digits=e.target.checked;save();if(st.digits)say(phrase(15))});
 $('chime').addEventListener('change',e=>{st.chime=e.target.checked;save();if(st.chime)chime()});
+$('tick').addEventListener('change',e=>{st.tick=e.target.checked;save();if(st.tick){tick(false);setTimeout(()=>tick(false),500);setTimeout(()=>tick(true),1000)}});
 $('style').addEventListener('change',e=>{st.style=e.target.checked;save()});
 $('pats').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.pat=b.dataset.p;save();render(false)});
 [...$('sinner').children].forEach((c,i)=>c.style.setProperty('--i',i));
