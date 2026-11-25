@@ -55,6 +55,16 @@ box-shadow:0 18px 30px -12px rgba(0,0,0,.6),inset 0 -10px 24px rgba(0,0,0,.25)}
 @media(prefers-reduced-motion:reduce){.ball.pop{animation:none}}
 .say{margin:30px 0 0;text-align:center;font-size:19px;color:var(--soft);min-height:1.5em}
 .call{display:block;width:100%;margin-top:14px;min-height:76px;border:0;border-radius:22px;background:var(--gold);color:#1a1300;font:800 28px/1 Rubik,sans-serif;box-shadow:0 6px 0 #b8901a,0 12px 20px -6px rgba(0,0,0,.5);transition:transform .08s}
+.call{position:relative;overflow:hidden;isolation:isolate}
+.lbl{position:relative;z-index:2;display:block}
+.fill{position:absolute;left:0;right:0;bottom:0;height:100%;z-index:1;transform:translateY(100%);pointer-events:none;will-change:transform}
+.fill.on{transform:translateY(8%)}
+.fill.drain{transition:transform .5s cubic-bezier(.5,0,.75,0)!important;transform:translateY(100%)}
+.water{position:absolute;left:0;right:0;top:0;bottom:0;background:linear-gradient(#f39a00,#e07b00)}
+.wave{position:absolute;left:0;width:200%;height:16px;top:-15px;fill:#f39a00;animation:surf 2.2s linear infinite}
+.wave.back{top:-19px;fill:#ffb52e;opacity:.85;animation-duration:3.4s;animation-direction:reverse}
+@keyframes surf{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){.wave{animation:none}}
 .call small{display:block;font:700 16px/1.2 "Atkinson Hyperlegible",sans-serif;margin-top:4px}
 .call:active{transform:translateY(4px);box-shadow:0 2px 0 #b8901a}
 .call:disabled{background:#6f8c82;color:#dfe;box-shadow:none;cursor:default}
@@ -139,7 +149,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <div class="ball" id="ball"><div class="face" id="face"></div></div>
       </div>
       <p class="say" id="say"></p>
-      <button class="call" id="call">Call next number</button>
+      <button class="call" id="call"><span class="fill" id="fill" aria-hidden="true"><svg class="wave back" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0 10 Q12.5 0 25 10 T50 10 T75 10 T100 10 T125 10 T150 10 T175 10 T200 10 V20 H0Z"/></svg><svg class="wave front" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0 10 Q12.5 0 25 10 T50 10 T75 10 T100 10 T125 10 T150 10 T175 10 T200 10 V20 H0Z"/></svg><span class="water"></span></span><span class="lbl" id="callLbl">Call next number</span></button>
       <div class="row">
         <button class="btn" id="undo">Undo last</button>
         <button class="btn" id="voice" aria-pressed="false">Read aloud</button>
@@ -332,10 +342,10 @@ function render(pop){
   }
   if(pop){ball.classList.remove('pop');void ball.offsetWidth;ball.classList.add('pop')}
   const done=c.length>=75;
-  const cb=$('call');cb.disabled=done;
-  if(done)cb.textContent='All 75 called';
-  else if(auto){cb.innerHTML=c.length?'Next number':'Start calling';if(running&&timer)cb.innerHTML+=`<small>Next call in ${left}s</small>`;else if(running)cb.innerHTML+='<small>Calling…</small>'}
-  else cb.textContent='Call next number';
+  const cb=$('call'),lb=$('callLbl');cb.disabled=done;
+  if(done)lb.textContent='All 75 called';
+  else if(auto){lb.innerHTML=c.length?'Next number':'Start calling';if(running&&timer)lb.innerHTML+=`<small>Next call in ${left}s</small>`;else if(running)lb.innerHTML+='<small>Calling…</small>'}
+  else lb.textContent='Call next number';
   $('undo').disabled=!c.length;
   $('voice').hidden=auto;$('voice').setAttribute('aria-pressed',st.voice);
   $('play').hidden=!auto||!st.every||done;
@@ -354,12 +364,18 @@ let lock=null;
 async function wake(){try{if(!lock&&navigator.wakeLock){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>lock=null)}}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&st.called.length)wake()});
 
-function clearTimer(){if(timer){clearInterval(timer);timer=null}}
+function fillStart(sec){
+  const f=$('fill');f.classList.remove('drain','on');f.style.transition='none';
+  void f.offsetHeight;
+  f.style.transition=`transform ${sec}s linear`;f.classList.add('on');
+}
+function fillDrain(){const f=$('fill');if(f.classList.contains('on')){f.style.transition='';f.classList.remove('on');f.classList.add('drain')}}
+function clearTimer(){if(timer){clearInterval(timer);timer=null}fillDrain()}
 function stopAuto(){running=false;clearTimer();render(false)}
 function countdown(){
   clearTimer();
   if(!running||st.mode!=='auto'||!st.every||st.called.length>=75){if(st.called.length>=75)running=false;render(false);return}
-  left=st.every;render(false);tick(left<=3);
+  left=st.every;render(false);tick(left<=3);fillStart(st.every);
   timer=setInterval(()=>{left--;if(left<=0){clearTimer();callNext()}else{render(false);tick(left<=3)}},1000);
 }
 async function callNext(){
