@@ -143,7 +143,10 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 .pside{display:flex;flex-direction:column;gap:2.2vh;min-height:0}
 .pbrand{display:flex;align-items:center;gap:1vw;font:800 min(2.6vw,5vh)/1 Rubik,sans-serif;letter-spacing:-.02em}
 .plogo{width:min(4.4vw,8.5vh);height:min(4.4vw,8.5vh);flex:none}
-.pnow{display:grid;place-items:center;flex:1;min-height:0}
+.pnow{display:flex;align-items:center;justify-content:center;gap:1vw;flex:1;min-height:0}
+.tumb{position:relative;height:160px;margin-top:6px}
+.tumb canvas{position:absolute;inset:0;width:100%;height:100%}
+.ptumb{flex:1;align-self:stretch;height:auto;margin:0;min-height:0}
 .bb{--s:100px;--c:#5a7a70;width:var(--s);height:var(--s);border-radius:50%;display:grid;place-items:center;flex:none;background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.75) 0 6%,rgba(255,255,255,0) 22%),radial-gradient(circle at 50% 55%,var(--c) 0 55%,color-mix(in srgb,var(--c) 60%,#000) 100%);box-shadow:0 calc(var(--s)*.07) calc(var(--s)*.12) calc(var(--s)*-.04) rgba(0,0,0,.6),inset 0 calc(var(--s)*-.04) calc(var(--s)*.09) rgba(0,0,0,.25)}
 .bb .f{width:64%;height:64%;border-radius:50%;background:#fff;color:#111;display:grid;place-content:center;text-align:center;line-height:.95}
 .bb .l{font:800 calc(var(--s)*.15) Rubik,sans-serif;color:var(--cl)}
@@ -278,6 +281,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <div class="ball" id="ball"><div class="face" id="face"></div></div>
       </div>
       <p class="say" id="say"></p>
+      <div class="tumb" id="tumbMain" hidden aria-hidden="true"><canvas></canvas></div>
       <button class="call" id="call"><span class="fill" id="fill" aria-hidden="true"><svg class="wave back" viewBox="0 0 20 200" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H10Q20 12.5 10 25T10 50T10 75T10 100T10 125T10 150T10 175T10 200H0Z"/></svg><svg class="wave front" viewBox="0 0 20 200" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H10Q20 12.5 10 25T10 50T10 75T10 100T10 125T10 150T10 175T10 200H0Z"/></svg><span class="water"></span></span><span class="lbl" id="callLbl">Call next number</span></button>
       <button class="btn bingo-btn" id="bingoBtn">BINGO!</button>
       <div class="row">
@@ -335,7 +339,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
   <circle cx="50" cy="45" r="22" fill="#fff"/>
   <text x="50" y="56" text-anchor="middle" font-family="Rubik, 'Arial Black', 'DejaVu Sans', sans-serif" font-weight="800" font-size="31" fill="#2f7fe0">B</text>
 </svg><span>Bingo Slop</span></div>
-    <div class="pnow" id="pnow"></div>
+    <div class="pnow"><div id="pnow"></div><div class="tumb ptumb" id="tumbProj" hidden aria-hidden="true"><canvas></canvas></div></div>
     <div class="pmeta"><span id="pcount"></span><span id="pnext"></span></div>
     <div class="ppat"><div class="pgrid" id="pgrid"></div><div class="pptext"><small>Now playing</small><b id="ppat"></b><span id="pdesc"></span></div></div>
     <div class="precent" id="precent"></div>
@@ -604,6 +608,7 @@ function render(pop){
   $('play').hidden=!auto||!st.every||done;
   $('play').textContent=running?'Pause':'Start auto';$('play').classList.toggle('run',running);
   document.querySelectorAll('.vonly').forEach(e=>e.hidden=!auto);$('vhint').hidden=auto;$('repeat').hidden=!auto;
+  $('tumbMain').hidden=$('tumbProj').hidden=!(auto&&st.every);
   applySkin();
   document.querySelectorAll('#every .chip').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.s)===st.every));
   $('rate').value=st.rate;$('twice').checked=st.twice;$('style').checked=st.style;$('digits').checked=st.digits;$('chime').checked=st.chime;$('tick').checked=st.tick;
@@ -620,6 +625,7 @@ async function wake(){try{if(!lock&&navigator.wakeLock){lock=await navigator.wak
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&st.called.length)wake()});
 
 function fillStart(sec){
+  cdStart=performance.now();cdDur=sec*1000;
   document.querySelectorAll('.fill').forEach(f=>{
     f.classList.remove('drain','on');f.style.transition='none';
     void f.offsetHeight;
@@ -627,7 +633,7 @@ function fillStart(sec){
   });
 }
 function fillDrain(){document.querySelectorAll('.fill').forEach(f=>{if(f.classList.contains('on')){f.style.transition='';f.classList.remove('on');f.classList.add('drain')}})}
-function clearTimer(){if(timer){clearInterval(timer);timer=null}fillDrain()}
+function clearTimer(){if(timer){clearInterval(timer);timer=null}cdStart=0;fillDrain()}
 function stopAuto(){running=false;clearTimer();render(false)}
 function countdown(){
   clearTimer();
@@ -643,6 +649,7 @@ async function callNext(){
   let i;
   if(window.crypto?.getRandomValues){const a=new Uint32Array(1);crypto.getRandomValues(a);i=a[0]%pool.length}else i=Math.floor(Math.random()*pool.length);
   const n=pool[i];st.called.push(n);save();render(true);wake();
+  if(st.mode==='auto'&&st.every)tumbEject(n);
   const id=++callId;
   const shown=projOpen?projShow(n):0;
   if(voiceOn())await announceCall(n);
@@ -754,6 +761,93 @@ $('pNext').addEventListener('click',()=>$('call').click());
 $('pPlay').addEventListener('click',()=>{$('play').click();projRender()});
 $('protOk').addEventListener('click',()=>$('prot').classList.remove('show'));
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&projOpen){}});
+// ================= Tumbler: a spinning bingo cage with light ball physics =================
+let cdStart=0,cdDur=1;
+const TUMB_N=22,TUMB_R=0.14;
+function tumbColors(){const cs=getComputedStyle(document.documentElement);return ['--B','--I','--N','--G','--O'].map(v=>cs.getPropertyValue(v).trim()||'#888')}
+function makeTumbler(wrap){
+  const cv=wrap.querySelector('canvas'),ctx=cv.getContext('2d');
+  const balls=[];
+  for(let i=0;i<TUMB_N;i++){const a=Math.random()*6.28,d=Math.random()*0.6;balls.push({x:Math.cos(a)*d,y:0.3+Math.sin(a)*d*0.5,vx:0,vy:0,c:i%5})}
+  const T={wrap,cv,ctx,balls,theta:0,w:0,eject:null,tray:null,W:0,H:0,cols:tumbColors(),frame:0};
+  const size=()=>{const dpr=Math.min(2,devicePixelRatio||1);T.W=wrap.clientWidth;T.H=wrap.clientHeight;cv.width=Math.max(1,T.W*dpr);cv.height=Math.max(1,T.H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)};
+  T.ro=new ResizeObserver(size);T.ro.observe(wrap);size();
+  return T;
+}
+function tumbStep(T,dt,inten){
+  // drum spin eases toward a target set by how close the next call is
+  const target=inten>0?1.2+inten*5.5:0;
+  T.w+=(target-T.w)*Math.min(1,dt*2);T.theta+=T.w*dt;
+  const B=T.balls,r=TUMB_R,lim=1-r;
+  for(const b of B){
+    b.vy+=5.2*dt;
+    if(inten>0&&b.y>0.25&&Math.random()<0.18){b.vy-=(5+9*inten)*Math.random();b.vx+=(Math.random()-.5)*3.5*inten}
+    b.vx*=0.995;b.vy*=0.995;
+    const sp=Math.hypot(b.vx,b.vy);if(sp>7){b.vx*=7/sp;b.vy*=7/sp}
+    b.x+=b.vx*dt;b.y+=b.vy*dt;
+  }
+  for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++){
+    const a=B[i],b=B[j],dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,m=2*r;
+    if(d2<m*m&&d2>1e-9){const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,o=(m-d)/2;a.x-=nx*o;a.y-=ny*o;b.x+=nx*o;b.y+=ny*o;
+      const rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rv<0){const jj=-(1+0.8)*rv/2;a.vx-=jj*nx;a.vy-=jj*ny;b.vx+=jj*nx;b.vy+=jj*ny}}
+  }
+  for(const b of B){
+    const d=Math.hypot(b.x,b.y);
+    if(d>lim){const nx=b.x/d,ny=b.y/d;b.x=nx*lim;b.y=ny*lim;
+      const vn=b.vx*nx+b.vy*ny;if(vn>0){b.vx-=1.7*vn*nx;b.vy-=1.7*vn*ny}
+      // the cage wall drags balls round with it
+      const tx=-ny,ty=nx,vt=b.vx*tx+b.vy*ty,wt=T.w*1;b.vx+=(wt-vt)*0.3*tx;b.vy+=(wt-vt)*0.3*ty}
+  }
+}
+function tumbDraw(T,now){
+  const {ctx,W,H}=T;if(!W||!H)return;
+  if(++T.frame%45===0)T.cols=tumbColors();
+  ctx.clearRect(0,0,W,H);
+  const R=Math.min(W*0.36,H*0.4),cx=W*0.42,cy=H*0.44,rb=TUMB_R*R;
+  const gold=getComputedStyle(document.documentElement).getPropertyValue('--gold').trim()||'#ffd23f';
+  // stand and base
+  ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.ellipse(cx,H*0.95,R*1.05,H*0.035,0,0,6.28);ctx.fill();
+  ctx.strokeStyle=gold;ctx.lineWidth=Math.max(3,R*0.07);ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx-R*0.75,H*0.92);ctx.moveTo(cx,cy);ctx.lineTo(cx+R*0.75,H*0.92);ctx.stroke();
+  ctx.fillStyle=gold;ctx.fillRect(cx-R*0.95,H*0.9,R*1.9,Math.max(4,H*0.04));
+  // chute and tray
+  const a0=0.55,sx=cx+Math.cos(a0)*R,sy=cy+Math.sin(a0)*R,ex=Math.min(W-rb*1.4,cx+R*1.55),ey=H*0.8;
+  ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=rb*2.5;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+  ctx.strokeStyle=gold;ctx.lineWidth=Math.max(2,rb*0.35);ctx.beginPath();ctx.moveTo(ex-rb*1.6,ey+rb*1.2);ctx.lineTo(ex+rb*1.3,ey+rb*1.2);ctx.stroke();
+  // glass back
+  const g=ctx.createRadialGradient(cx-R*0.3,cy-R*0.4,R*0.1,cx,cy,R);g.addColorStop(0,'rgba(255,255,255,.16)');g.addColorStop(1,'rgba(255,255,255,.04)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,6.28);ctx.fill();
+  const ball=(x,y,c)=>{const gg=ctx.createRadialGradient(x-rb*.35,y-rb*.4,rb*.1,x,y,rb);gg.addColorStop(0,'#fff');gg.addColorStop(.35,c);gg.addColorStop(1,c);
+    ctx.fillStyle=gg;ctx.beginPath();ctx.arc(x,y,rb,0,6.28);ctx.fill();ctx.fillStyle='rgba(255,255,255,.9)';ctx.beginPath();ctx.arc(x,y,rb*.42,0,6.28);ctx.fill()};
+  for(const b of T.balls)ball(cx+b.x*R,cy+b.y*R,T.cols[b.c]);
+  // rotating cage bars over the balls
+  ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=Math.max(1.5,R*0.025);
+  for(let k=0;k<6;k++){const a=T.theta+k*Math.PI/6;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.lineTo(cx-Math.cos(a)*R,cy-Math.sin(a)*R);ctx.stroke()}
+  ctx.strokeStyle=gold;ctx.lineWidth=Math.max(2.5,R*0.045);ctx.beginPath();ctx.arc(cx,cy,R,0,6.28);ctx.stroke();
+  ctx.fillStyle=gold;ctx.beginPath();ctx.arc(cx,cy,Math.max(4,R*0.09),0,6.28);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=Math.max(2,R*0.03);ctx.beginPath();ctx.arc(cx,cy,R*0.86,3.6,4.4);ctx.stroke();
+  // ball rolling out of the chute
+  if(T.eject){const p=Math.min(1,(now-T.eject.t)/750),e=p*p*(3-2*p);
+    ball(sx+(ex-sx)*e,sy+(ey-sy)*e-Math.sin(p*Math.PI)*rb*1.5,T.eject.c);if(p>=1){T.tray=T.eject.c;T.eject=null}}
+  else if(T.tray)ball(ex,ey,T.tray);
+}
+const tumbs=[makeTumbler($('tumbMain')),makeTumbler($('tumbProj'))];
+function tumbEject(n){const l=letter(n),cs=getComputedStyle(document.documentElement),c=cs.getPropertyValue('--'+l).trim()||'#fff';
+  for(const T of tumbs){T.eject={t:performance.now(),c};const b=T.balls[(Math.random()*T.balls.length)|0];b.vy-=4;b.vx+=2}}
+function tumbIntensity(){if(reduce||!running||!timer||!cdStart)return 0;return Math.min(1,Math.max(0,(performance.now()-cdStart)/cdDur))}
+let tumbLast=performance.now();
+function tumbLoop(now){
+  const dt=Math.min(1/30,(now-tumbLast)/1000);tumbLast=now;
+  const inten=tumbIntensity();
+  tumbs.forEach((T,i)=>{
+    const vis=!T.wrap.hidden&&(i===1?projOpen:!projOpen);
+    if(!vis)return;
+    if(!reduce){tumbStep(T,dt/2,inten);tumbStep(T,dt/2,inten)}
+    tumbDraw(T,now);
+  });
+  requestAnimationFrame(tumbLoop);
+}
+requestAnimationFrame(tumbLoop);
 const dlg=$('dlg');
 const nextPat=()=>PATS[(PATS.indexOf(st.pat)+1)%PATS.length];
 $('reset').addEventListener('click',()=>{
