@@ -296,7 +296,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <div class="field"><span>Theme</span><div class="chips" id="skins"><button class="chip" data-k="classic">Classic green</button><button class="chip" data-k="vegas">Darlene's Vegas</button></div></div>
         <p class="note vhint" id="vhint">Voice options appear here when you switch to Voice caller.</p>
         <div class="field vonly"><span>Call the next number by itself</span><div class="chips" id="every"></div></div>
-        <div class="field vonly"><label for="vsel">Voice</label><select id="vsel"><option>Phone's default voice</option></select></div>
+        <div class="field vonly"><label for="vsel">Voice</label><select id="vsel"><option value="__studio">George (natural studio voice)</option><option value="">Phone's default voice</option></select></div>
         <div class="field vonly"><label for="rate">Speaking speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div class="ends"><span>Slower</span><span>Faster</span></div></div>
         <label class="check vonly"><input type="checkbox" id="style"> Caller style: “Under the B… 7”</label>
         <label class="check vonly"><input type="checkbox" id="digits"> Say digits separately: “one, five… fifteen”</label>
@@ -394,7 +394,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true};
+let st={history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 window.claude?.hot?.snapshot?.(()=>st);
@@ -416,8 +416,8 @@ function loadVoices(){
   const all=speechSynthesis.getVoices();
   voices=all.filter(v=>/^en/i.test(v.lang));if(!voices.length)voices=all;
   const sel=$('vsel');
-  sel.innerHTML='<option value="">Phone\'s default voice</option>'+voices.map((v,i)=>{const o=document.createElement('option');o.value=v.name;o.textContent=`${v.name} (${v.lang})`;return o.outerHTML}).join('');
-  sel.value=voices.some(v=>v.name===st.vname)?st.vname:'';
+  sel.innerHTML='<option value="__studio">George (natural studio voice)</option><option value="">Phone\'s default voice</option>'+voices.map((v,i)=>{const o=document.createElement('option');o.value=v.name;o.textContent=`${v.name} (${v.lang})`;return o.outerHTML}).join('');
+  sel.value=st.vname==='__studio'||voices.some(v=>v.name===st.vname)?st.vname:'';
 }
 if(hasTTS){loadVoices();try{speechSynthesis.addEventListener('voiceschanged',loadVoices)}catch(e){speechSynthesis.onvoiceschanged=loadVoices}}
 
@@ -475,6 +475,72 @@ function tick(last){
   }catch(e){}
 }
 async function announce(text){await chime();await say(text)}
+// ================= Studio voice: pre-recorded natural AI clips =================
+const STUDIO_DIR='voice/george/';
+const STUDIO_TEXT={"Hello everyone, welcome to Bingo Slop! Eyes down, here we go.":'test',"Bingo! Let's check that card.":'bingo','We have a winner! Congratulations!':'winner','No bingo yet. Keep playing!':'nobingo','Next number coming up.':'nextup','No numbers called yet.':'nocalls','This is how I will sound.':'sample'};
+const clipCache=new Map();
+let clipTok=0,curSrc=null,studioHeard=false;
+const studioOn=()=>st.vname==='__studio';
+function clipKeys(){
+  const k=['test','bingo','winner','nobingo','nextup','nocalls','sample'].concat(PATS.map(p=>'ng_'+p));
+  L.forEach(l=>k.push('under_'+l,'let_'+l));
+  for(let n=1;n<=75;n++){k.push('num_'+n,'rep_'+n);if(n>=10)k.push('dig_'+n)}
+  return k;
+}
+function loadClip(key){
+  if(!clipCache.has(key)){
+    const p=fetch(STUDIO_DIR+encodeURIComponent(key.replace(/ /g,'_'))+'.mp3').then(r=>{if(!r.ok)throw new Error('missing '+key);return r.arrayBuffer()});
+    p.catch(()=>clipCache.delete(key));
+    clipCache.set(key,p);
+  }
+  return clipCache.get(key);
+}
+let preloaded=false;
+async function preloadStudio(){
+  if(preloaded||!studioOn())return;preloaded=true;
+  const keys=clipKeys();let i=0;
+  const worker=async()=>{while(i<keys.length){const k=keys[i++];try{await loadClip(k)}catch(e){}}};
+  await Promise.all([worker(),worker(),worker(),worker(),worker(),worker()]);
+}
+function stopVoice(){
+  clipTok++;try{curSrc&&curSrc.stop()}catch(e){}curSrc=null;
+  try{if(hasTTS){speechSynthesis.cancel()}}catch(e){}
+}
+// items: clip keys, or numbers = pause in ms
+async function playSeq(items){
+  const a=audio();if(!a)throw new Error('no audio');
+  const tok=++clipTok;
+  const bufs=await Promise.all(items.map(it=>typeof it==='number'?it:loadClip(it).then(b=>a.decodeAudioData(b.slice(0)))));
+  for(const b of bufs){
+    if(tok!==clipTok)return;
+    if(typeof b==='number'){await wait(b);continue}
+    await new Promise(res=>{
+      const s=a.createBufferSource();s.buffer=b;
+      s.playbackRate.value=Math.min(1.2,Math.max(0.8,(Number(st.rate)||0.85)/0.85));
+      s.connect(a.destination);s.onended=res;curSrc=s;s.start();
+      setTimeout(res,b.duration*1000/s.playbackRate.value+400);
+    });
+  }
+  if(!studioHeard){studioHeard=true;vstat('Studio voice is working.')}
+}
+function callSeq(n){
+  const l=letter(n),seq=[st.style?'under_'+l:'let_'+l,260];
+  if(st.digits&&n>=10)seq.push('dig_'+n,320);
+  seq.push('num_'+n);
+  if(st.twice)seq.push(520,'rep_'+n);
+  return seq;
+}
+async function say(text){
+  const key=STUDIO_TEXT[text]||(text.startsWith('New game. This one is ')?'ng_'+text.slice(22,-1):null);
+  if(studioOn()&&key){try{await playSeq([key]);return}catch(e){}}
+  return ttsSay(text);
+}
+async function sayCall(n){
+  if(studioOn()){try{await playSeq(callSeq(n));return}catch(e){vstat('Studio voice could not load, using the phone voice instead.')}}
+  return ttsSay(phrase(n));
+}
+async function announceCall(n){await chime();await sayCall(n)}
+
 // Phones only allow speech after a tap: speak a silent utterance on the very first tap to unlock it.
 let unlocked=false,cur=null,heard=false;
 function unlock(){
@@ -486,7 +552,7 @@ document.addEventListener('click',unlock,{capture:true});
 document.addEventListener('touchend',unlock,{capture:true});
 function vstat(msg,warn){$('vstat').textContent=msg;if(warn&&st.mode==='auto')setOpen(true)}
 // speaks text; resolves when finished (or after a safety timeout)
-function say(text){
+function ttsSay(text){
   return new Promise(res=>{
     if(!hasTTS){vstat("This browser can't speak out loud. Use Safari on iPhone or Chrome on Android.");res();return}
     ++speakTok;
@@ -579,25 +645,25 @@ async function callNext(){
   const n=pool[i];st.called.push(n);save();render(true);wake();
   const id=++callId;
   const shown=projOpen?projShow(n):0;
-  if(voiceOn())await announce(phrase(n));
+  if(voiceOn())await announceCall(n);
   if(shown)await projLand(n,shown);
   if(id!==callId)return;
   if(running)countdown();
 }
 
 $('call').addEventListener('click',()=>{if(st.mode==='auto'&&st.every&&!running)running=true;callNext()});
-$('play').addEventListener('click',()=>{if(running){stopAuto();if(hasTTS)speechSynthesis.cancel()}else{running=true;if(!st.called.length)callNext();else{say('Next number coming up.');countdown()}}});
-$('undo').addEventListener('click',()=>{if(!st.called.length)return;stopAuto();if(hasTTS)speechSynthesis.cancel();st.called.pop();save();render(false)});
-$('voice').addEventListener('click',()=>{st.voice=!st.voice;save();render(false);const n=st.called[st.called.length-1];if(st.voice&&n)say(phrase(n))});
-$('say').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)say(phrase(n))});
-$('repeat').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)announce(phrase(n));else say('No numbers called yet.')});
+$('play').addEventListener('click',()=>{if(running){stopAuto();stopVoice()}else{running=true;if(!st.called.length)callNext();else{say('Next number coming up.');countdown()}}});
+$('undo').addEventListener('click',()=>{if(!st.called.length)return;stopAuto();stopVoice();st.called.pop();save();render(false)});
+$('voice').addEventListener('click',()=>{st.voice=!st.voice;save();render(false);const n=st.called[st.called.length-1];if(st.voice&&n)sayCall(n)});
+$('say').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)sayCall(n)});
+$('repeat').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)announceCall(n);else say('No numbers called yet.')});
 $('test').addEventListener('click',()=>announce("Hello everyone, welcome to Bingo Slop! Eyes down, here we go."));
 $('mode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.mode=b.dataset.m;if(st.mode!=='auto')stopAuto();save();render(false)});
 $('every').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.every=Number(b.dataset.s);save();if(!st.every)stopAuto();else if(running)countdown();else render(false)});
-$('vsel').addEventListener('change',e=>{st.vname=e.target.value;save();say('This is how I will sound.')});
-$('rate').addEventListener('change',e=>{st.rate=Number(e.target.value);save();say(phrase(15))});
+$('vsel').addEventListener('change',e=>{st.vname=e.target.value;save();preloadStudio();say('This is how I will sound.')});
+$('rate').addEventListener('change',e=>{st.rate=Number(e.target.value);save();sayCall(15)});
 $('twice').addEventListener('change',e=>{st.twice=e.target.checked;save()});
-$('digits').addEventListener('change',e=>{st.digits=e.target.checked;save();if(st.digits)say(phrase(15))});
+$('digits').addEventListener('change',e=>{st.digits=e.target.checked;save();if(st.digits)sayCall(15)});
 $('chime').addEventListener('change',e=>{st.chime=e.target.checked;save();if(st.chime)chime()});
 $('tick').addEventListener('change',e=>{st.tick=e.target.checked;save();if(st.tick){tick(false);setTimeout(()=>tick(false),500);setTimeout(()=>tick(true),1000)}});
 $('style').addEventListener('change',e=>{st.style=e.target.checked;save()});
@@ -700,7 +766,7 @@ dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.classList.remove('open')}
 function newGame(){
   stopAuto();
   if(st.called.length){st.history.unshift({t:Date.now(),pat:st.pat,called:[...st.called]});st.history=st.history.slice(0,60)}
-  st.called=[];st.pat=nextPat();save();dlg.classList.remove('open');if(hasTTS)speechSynthesis.cancel();render(true);
+  st.called=[];st.pat=nextPat();save();dlg.classList.remove('open');stopVoice();render(true);
   if(voiceOn())announce(`New game. This one is ${st.pat}.`);
 }
 $('yes').addEventListener('click',newGame);
@@ -755,7 +821,7 @@ $('chkGrid').addEventListener('click',e=>{
   chkSummary();
 });
 function bingoOpen(){
-  wasRunning=running;stopAuto();if(hasTTS)speechSynthesis.cancel();
+  wasRunning=running;stopAuto();stopVoice();
   const o=$('bingo');o.classList.remove('won');o.classList.add('checking');$('bgSub').textContent='Checking the card…';$('bgRow1').hidden=false;$('bgRow2').hidden=true;
   chkBuild();
   o.hidden=false;o.querySelectorAll('.bgword b').forEach(b=>{b.style.animation='none';void b.offsetWidth;b.style.animation=''});
@@ -805,7 +871,7 @@ $('hist').addEventListener('click',e=>{if(e.target===$('hist'))$('hist').hidden=
 $('hClear').addEventListener('click',()=>{const b=$('hClear');if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Tap again to delete all past games';setTimeout(()=>{b.classList.remove('arm');b.textContent='Clear history'},4000);return}st.history=[];save();histList()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){dlg.classList.remove('open');$('bingo').hidden=true;$('hist').hidden=true;if(projOpen&&!document.fullscreenElement)closeProj()}if(projOpen&&(e.key===' '||e.key==='ArrowRight')){e.preventDefault();$('call').click()}});
 
-const start=d=>{if(d&&Array.isArray(d.called))st=Object.assign(st,d);render(false)};
+const start=d=>{if(d&&Array.isArray(d.called))st=Object.assign(st,d);render(false);setTimeout(preloadStudio,800)};
 window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data);
 }
 </script>
