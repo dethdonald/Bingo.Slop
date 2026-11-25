@@ -178,6 +178,30 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 .prot{position:absolute;inset:0;z-index:6;display:none;place-content:center;justify-items:center;gap:16px;text-align:center;padding:24px;background:rgba(3,20,15,.92);font-size:20px}
 @media(orientation:portrait){.prot.show{display:grid}.proj{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.pside{flex-direction:row;flex-wrap:wrap;align-items:center}.pnow{flex:none}.pnow .bb{--s:22vw}.prow{gap:.4vw}.pc{font-size:2.6vw}.pl{font-size:5vw}}
 @media(prefers-reduced-motion:reduce){.pc.pop{animation:none}}
+/* ---- past games sheet */
+.sheet{position:fixed;inset:0;z-index:15;background:rgba(0,0,0,.55);display:grid;align-items:end}
+.sheet[hidden]{display:none!important}
+.sheetbox{width:100%;max-width:720px;margin:0 auto;max-height:88svh;overflow:auto;background:var(--felt2);border-top:2px solid var(--gold);border-radius:24px 24px 0 0;padding:6px max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));animation:up .38s cubic-bezier(.22,1,.36,1)}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+@media(prefers-reduced-motion:reduce){.sheetbox{animation:none}}
+.shead{position:sticky;top:-6px;z-index:2;display:grid;grid-template-columns:88px 1fr 88px;align-items:center;background:var(--felt2);padding:10px 0}
+.shead h3{margin:0;text-align:center;font:800 22px/1.1 Rubik,sans-serif}
+.hbtn{min-height:44px;border:0;background:none;font-weight:700;font-size:17px;color:var(--gold);justify-self:start;padding:0 4px}
+.hbtn.x{justify-self:end;font-size:30px;line-height:1;color:var(--ink)}
+.hbtn[hidden]{visibility:hidden;display:block!important}
+.hitem{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;text-align:left;padding:14px;margin-bottom:8px;border-radius:16px;border:1.5px solid var(--line);background:rgba(255,255,255,.06)}
+.hitem b{font-size:18px}
+.hitem small{grid-column:1;color:var(--soft);font-size:15px}
+.hitem .hn{grid-row:1/3;grid-column:2;text-align:right;font:800 26px/1 Rubik,sans-serif}
+.hitem .hn span{display:block;font:400 13px "Atkinson Hyperlegible",sans-serif;color:var(--soft)}
+.hempty{color:var(--soft);text-align:center;padding:28px 8px}
+.hmeta{color:var(--soft);margin:0 0 12px}
+.hmeta b{color:var(--ink)}
+.horder{display:flex;flex-wrap:wrap;gap:8px}
+.horder .mini{width:48px;height:48px;font-size:11px}
+.horder .mini span{font-size:18px}
+.hclear{width:100%;margin-top:16px;flex:none}
+.hclear.arm{background:#d8342b;border-color:#d8342b}
 .dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;padding:20px;z-index:9}
 .dlg.open{display:grid}
 .box{background:#fff;color:#14201b;border-radius:22px;padding:24px;max-width:380px;width:100%}
@@ -219,6 +243,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <button class="btn" id="play" hidden>Start auto</button>
         <button class="btn" id="reset">New game</button>
         <button class="btn" id="projBtn">Projector view</button>
+        <button class="btn" id="histBtn">Past games</button>
       </div>
 
       <div class="panel" id="autoPanel">
@@ -280,10 +305,22 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
   <button class="pexit" id="pExit" aria-label="Exit projector view" title="Exit projector view"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button>
   <div class="prot" id="prot"><p>Turn your phone sideways so the board fills the projector.</p><button class="pbtn" id="protOk">Got it</button></div>
 </div>
+<div class="sheet" id="hist" hidden role="dialog" aria-modal="true" aria-labelledby="histT">
+  <div class="sheetbox">
+    <div class="shead">
+      <button class="hbtn" id="hBack" hidden>‹ Back</button>
+      <h3 id="histT">Past games</h3>
+      <button class="hbtn x" id="hClose" aria-label="Close">×</button>
+    </div>
+    <div id="hList"></div>
+    <div id="hDetail" hidden></div>
+    <button class="btn hclear" id="hClear">Clear history</button>
+  </div>
+</div>
 <div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dt">
   <div class="box">
     <h3 id="dt">Start a new game?</h3>
-    <p>This clears every number called so far.</p>
+    <p id="dlgP">This clears every number called so far.</p>
     <div class="row">
       <button class="btn" id="no">Keep playing</button>
       <button class="btn go" id="yes">Start new game</button>
@@ -298,7 +335,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true};
+let st={history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 window.claude?.hot?.snapshot?.(()=>st);
@@ -593,11 +630,45 @@ $('pPlay').addEventListener('click',()=>{$('play').click();projRender()});
 $('protOk').addEventListener('click',()=>$('prot').classList.remove('show'));
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&projOpen){}});
 const dlg=$('dlg');
-$('reset').addEventListener('click',()=>{stopAuto();dlg.classList.add('open');$('no').focus()});
+const nextPat=()=>PATS[(PATS.indexOf(st.pat)+1)%PATS.length];
+$('reset').addEventListener('click',()=>{
+  stopAuto();
+  $('dlgP').textContent=st.called.length?`This game is saved to Past games. Next up: ${nextPat()}.`:`Next up: ${nextPat()}.`;
+  dlg.classList.add('open');$('no').focus();
+});
 $('no').addEventListener('click',()=>dlg.classList.remove('open'));
 dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.classList.remove('open')});
-$('yes').addEventListener('click',()=>{st.called=[];save();dlg.classList.remove('open');if(hasTTS)speechSynthesis.cancel();render(true)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){dlg.classList.remove('open');if(projOpen&&!document.fullscreenElement)closeProj()}if(projOpen&&(e.key===' '||e.key==='ArrowRight')){e.preventDefault();$('call').click()}});
+$('yes').addEventListener('click',()=>{
+  if(st.called.length){st.history.unshift({t:Date.now(),pat:st.pat,called:[...st.called]});st.history=st.history.slice(0,60)}
+  st.called=[];st.pat=nextPat();save();dlg.classList.remove('open');if(hasTTS)speechSynthesis.cancel();render(true);
+  if(voiceOn())announce(`New game. This one is ${st.pat}.`);
+});
+// ---- past games
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+if(!Array.isArray(st.history))st.history=[];
+const fmtDate=t=>{try{return new Date(t).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return new Date(t).toString()}};
+const miniBall=n=>{const l=letter(n);return `<div class="mini" style="--c:${COL[l][0]};--t:${COL[l][1]}">${l}<span>${n}</span></div>`};
+function histList(){
+  $('hDetail').hidden=true;$('hList').hidden=false;$('hBack').hidden=true;$('histT').textContent='Past games';
+  $('hClear').hidden=!st.history.length;$('hClear').classList.remove('arm');$('hClear').textContent='Clear history';
+  $('hList').innerHTML=st.history.length?st.history.map((g,i)=>`<button class="hitem" data-i="${i}"><b>${fmtDate(g.t)}</b><small>${esc(g.pat)}</small><div class="hn">${g.called.length|0}<span>called</span></div></button>`).join(''):'<p class="hempty">No past games yet. When you tap New game, the finished game is saved here.</p>';
+}
+function histDetail(i){
+  const g=st.history[i];if(!g)return;
+  $('hList').hidden=true;$('hDetail').hidden=false;$('hBack').hidden=false;$('hClear').hidden=true;$('histT').textContent=g.pat;
+  const nums=(g.called||[]).map(Number).filter(n=>n>=1&&n<=75);
+  const set=new Set(nums),last=nums[nums.length-1];
+  let grid=L.map(l=>`<div class="hd" style="--c:${COL[l][0]};--t:${COL[l][1]}">${l}</div>`).join('');
+  for(let r=0;r<15;r++)for(let c=0;c<5;c++){const n=c*15+r+1,l=L[c];grid+=`<div class="cell${set.has(n)?' on':''}${n===last?' last':''}" style="--c:${COL[l][0]};--t:${COL[l][1]}">${n}</div>`}
+  $('hDetail').innerHTML=`<p class="hmeta">${fmtDate(g.t)} · <b>${nums.length}</b> numbers called</p><h2>Called in this order</h2><div class="horder">${nums.map(miniBall).join('')}</div><h2>Board</h2><div class="board"><div class="grid">${grid}</div></div>`;
+  $('hist').querySelector('.sheetbox').scrollTop=0;
+}
+$('histBtn').addEventListener('click',()=>{histList();$('hist').hidden=false;$('hClose').focus()});
+$('hClose').addEventListener('click',()=>$('hist').hidden=true);
+$('hBack').addEventListener('click',histList);
+$('hist').addEventListener('click',e=>{if(e.target===$('hist'))$('hist').hidden=true;const it=e.target.closest('.hitem');if(it)histDetail(Number(it.dataset.i))});
+$('hClear').addEventListener('click',()=>{const b=$('hClear');if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Tap again to delete all past games';setTimeout(()=>{b.classList.remove('arm');b.textContent='Clear history'},4000);return}st.history=[];save();histList()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){dlg.classList.remove('open');$('hist').hidden=true;if(projOpen&&!document.fullscreenElement)closeProj()}if(projOpen&&(e.key===' '||e.key==='ArrowRight')){e.preventDefault();$('call').click()}});
 
 const start=d=>{if(d&&Array.isArray(d.called))st=Object.assign(st,d);render(false)};
 window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data);
