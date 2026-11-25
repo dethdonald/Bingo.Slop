@@ -116,6 +116,53 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 .cell.last{outline:3px solid var(--gold);outline-offset:1px}
 .note{color:var(--soft);font-size:15px;margin:10px 2px 0}
 .vstat{margin:14px 0 0;padding:10px 12px;border-radius:12px;background:rgba(255,210,63,.14);font-weight:700;font-size:16px}
+/* ---- projector view: a hall flashboard on the felt, ball flies into its slot */
+.proj{position:fixed;inset:0;z-index:20;background:radial-gradient(120% 90% at 30% 0%,var(--felt) 0%,var(--felt2) 55%,var(--deep) 100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,29%);gap:2.4vw;padding:max(2.6vh,env(safe-area-inset-top)) max(2.4vw,env(safe-area-inset-right)) max(2.6vh,env(safe-area-inset-bottom)) max(2.4vw,env(safe-area-inset-left));overflow:hidden;user-select:none;-webkit-user-select:none}
+.proj[hidden]{display:none!important}
+.pboard{display:grid;grid-template-rows:repeat(5,minmax(0,1fr));gap:1.2vh;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:2vh;padding:1.4vh}
+.prow{display:grid;grid-template-columns:1.25fr repeat(15,minmax(0,1fr));gap:.6vw}
+.pl,.pc{border-radius:1.2vh;display:grid;place-items:center;font-family:Rubik,sans-serif;font-variant-numeric:tabular-nums}
+.pl{background:var(--c);color:var(--t,#fff);font-weight:800;font-size:min(4.4vw,8vh)}
+.pc{background:rgba(255,255,255,.05);color:rgba(255,255,255,.3);font-weight:600;font-size:min(2.2vw,4.6vh)}
+.pc.on{background:var(--c);color:var(--t,#fff);font-weight:800;box-shadow:inset 0 -.5vh 0 rgba(0,0,0,.18)}
+.pc.last{outline:.5vh solid var(--gold);outline-offset:.2vh}
+.pc.pop{animation:slot .7s cubic-bezier(.34,1.56,.64,1)}
+@keyframes slot{0%{transform:scale(1.7);box-shadow:0 0 0 0 rgba(255,210,63,.9)}60%{box-shadow:0 0 0 2.2vh rgba(255,210,63,0)}100%{transform:none}}
+.pside{display:flex;flex-direction:column;gap:2.2vh;min-height:0}
+.pbrand{display:flex;align-items:center;gap:1vw;font:800 min(2.6vw,5vh)/1 Rubik,sans-serif;letter-spacing:-.02em}
+.plogo{width:min(4.4vw,8.5vh);height:min(4.4vw,8.5vh);flex:none}
+.pnow{display:grid;place-items:center;flex:1;min-height:0}
+.bb{--s:100px;--c:#5a7a70;width:var(--s);height:var(--s);border-radius:50%;display:grid;place-items:center;flex:none;background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.75) 0 6%,rgba(255,255,255,0) 22%),radial-gradient(circle at 50% 55%,var(--c) 0 55%,color-mix(in srgb,var(--c) 60%,#000) 100%);box-shadow:0 calc(var(--s)*.07) calc(var(--s)*.12) calc(var(--s)*-.04) rgba(0,0,0,.6),inset 0 calc(var(--s)*-.04) calc(var(--s)*.09) rgba(0,0,0,.25)}
+.bb .f{width:64%;height:64%;border-radius:50%;background:#fff;color:#111;display:grid;place-content:center;text-align:center;line-height:.95}
+.bb .l{font:800 calc(var(--s)*.15) Rubik,sans-serif;color:var(--cl)}
+.bb .n{font:800 calc(var(--s)*.3) Rubik,sans-serif;letter-spacing:-.03em}
+.bb .h{font:700 calc(var(--s)*.07)/1.2 "Atkinson Hyperlegible",sans-serif;color:#444;padding:0 8%}
+.pnow .bb{--s:min(34vh,22vw)}
+.pmeta{display:flex;justify-content:space-between;gap:1vw;font-size:min(1.7vw,3.4vh);color:var(--soft);white-space:nowrap}
+.pmeta b{color:#fff}
+.ppat{display:flex;gap:1.4vw;align-items:center;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:2vh;padding:1.6vh 1.2vw}
+.pgrid{display:grid;grid-template-columns:repeat(5,min(2.1vw,4.2vh));grid-auto-rows:min(2.1vw,4.2vh);gap:.4vh;flex:none}
+.pgrid i{border-radius:.5vh;background:rgba(255,255,255,.12)}
+.pgrid i.on{background:var(--gold)}
+.pgrid i.free{background:#fff}
+.pptext{display:grid;line-height:1.15}
+.pptext small{font-size:min(1.3vw,2.6vh);color:var(--soft)}
+.pptext b{font:800 min(2.4vw,4.8vh)/1.1 Rubik,sans-serif;color:var(--gold)}
+.pptext span{font-size:min(1.3vw,2.6vh);color:var(--soft)}
+.precent{display:flex;gap:.8vw}
+.precent .bb{--s:min(4.2vw,10vh)}
+.flybg{position:absolute;inset:0;background:rgba(3,20,15,.6);opacity:0;pointer-events:none;transition:opacity .45s}
+.flybg.on{opacity:1}
+.fly{position:absolute;left:50%;top:50%;display:none;pointer-events:none;z-index:3}
+.fly .bb{--s:min(62vh,44vw)}
+.pbar{position:absolute;left:50%;bottom:max(2.6vh,env(safe-area-inset-bottom));transform:translate(-50%,0);display:flex;gap:10px;padding:10px;border-radius:18px;background:rgba(0,0,0,.6);z-index:4;transition:opacity .35s,transform .35s}
+.pbar.hide{opacity:0;transform:translate(-50%,140%);pointer-events:none}
+.pbtn{min-height:48px;padding:0 20px;border-radius:12px;border:1.5px solid var(--line);background:rgba(255,255,255,.1);font-weight:700;font-size:17px;white-space:nowrap}
+.pbtn.go{background:var(--gold);border-color:var(--gold);color:#1a1300}
+.pbtn[hidden]{display:none}
+.prot{position:absolute;inset:0;z-index:6;display:none;place-content:center;justify-items:center;gap:16px;text-align:center;padding:24px;background:rgba(3,20,15,.92);font-size:20px}
+@media(orientation:portrait){.prot.show{display:grid}.proj{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.pside{flex-direction:row;flex-wrap:wrap;align-items:center}.pnow{flex:none}.pnow .bb{--s:22vw}.prow{gap:.4vw}.pc{font-size:2.6vw}.pl{font-size:5vw}}
+@media(prefers-reduced-motion:reduce){.pc.pop{animation:none}}
 .dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;padding:20px;z-index:9}
 .dlg.open{display:grid}
 .box{background:#fff;color:#14201b;border-radius:22px;padding:24px;max-width:380px;width:100%}
@@ -156,6 +203,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <button class="btn" id="repeat" hidden>Say it again</button>
         <button class="btn" id="play" hidden>Start auto</button>
         <button class="btn" id="reset">New game</button>
+        <button class="btn" id="projBtn">Projector view</button>
       </div>
 
       <div class="panel" id="autoPanel" hidden>
@@ -188,6 +236,32 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
       <p class="note">When someone shouts bingo, pause, have them read their numbers back and check each one is lit up here.</p>
     </section>
   </div>
+</div>
+<div class="proj" id="proj" hidden>
+  <div class="pboard" id="pboard"></div>
+  <aside class="pside">
+    <div class="pbrand"><svg class="plogo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs><clipPath id="bs-ball2"><circle cx="50" cy="45" r="38"/></clipPath></defs>
+  <path fill="#f0b400" d="M56 81C58 86 58 89 58 92a6 6 0 0 0 12 0v-8c0-3 1-5 2-8z"/>
+  <circle cx="50" cy="45" r="38" fill="#f0b400"/>
+  <circle cx="46" cy="41" r="37" fill="#ffd23f" clip-path="url(#bs-ball2)"/>
+  <ellipse cx="32" cy="22" rx="8" ry="5" fill="#fff" opacity=".65" transform="rotate(-35 32 22)"/>
+  <circle cx="50" cy="45" r="22" fill="#fff"/>
+  <text x="50" y="56" text-anchor="middle" font-family="Rubik, 'Arial Black', 'DejaVu Sans', sans-serif" font-weight="800" font-size="31" fill="#2f7fe0">B</text>
+</svg><span>Bingo Slop</span></div>
+    <div class="pnow" id="pnow"></div>
+    <div class="pmeta"><span id="pcount"></span><span id="pnext"></span></div>
+    <div class="ppat"><div class="pgrid" id="pgrid"></div><div class="pptext"><small>Now playing</small><b id="ppat"></b><span id="pdesc"></span></div></div>
+    <div class="precent" id="precent"></div>
+  </aside>
+  <div class="flybg" id="flybg"></div>
+  <div class="fly" id="fly"></div>
+  <div class="pbar" id="pbar">
+    <button class="pbtn go" id="pNext">Next number</button>
+    <button class="pbtn" id="pPlay">Pause</button>
+    <button class="pbtn" id="pExit">Exit</button>
+  </div>
+  <div class="prot" id="prot"><p>Turn your phone sideways so the board fills the projector.</p><button class="pbtn" id="protOk">Got it</button></div>
 </div>
 <div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dt">
   <div class="box">
@@ -358,6 +432,7 @@ function render(pop){
   const set=new Set(c);
   for(let n=1;n<=75;n++){const e=$('c'+n);e.classList.toggle('on',set.has(n));e.classList.toggle('last',n===last)}
   document.querySelectorAll('#pats .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===st.pat));
+  projRender();
 }
 
 let lock=null;
@@ -387,7 +462,9 @@ async function callNext(){
   if(window.crypto?.getRandomValues){const a=new Uint32Array(1);crypto.getRandomValues(a);i=a[0]%pool.length}else i=Math.floor(Math.random()*pool.length);
   const n=pool[i];st.called.push(n);save();render(true);wake();
   const id=++callId;
+  const shown=projOpen?projShow(n):0;
   if(voiceOn())await announce(phrase(n));
+  if(shown)await projLand(n,shown);
   if(id!==callId)return;
   if(running)countdown();
 }
@@ -413,12 +490,89 @@ $('pats').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)r
 function setOpen(o){st.setOpen=o;save();$('autoPanel').classList.toggle('open',o);$('stoggle').setAttribute('aria-expanded',o);$('sinner').inert=!o}
 $('stoggle').addEventListener('click',()=>setOpen(!st.setOpen));
 setOpen(!!st.setOpen);
+// ================= Projector view =================
+let projOpen=false,pending=0,barT=null;
+const PAT_CELLS={'Any line':[10,11,12,13,14],'Four corners':[0,4,20,24],'Letter X':[0,6,12,18,24,4,8,16,20],'Full card':[...Array(25).keys()]};
+const PAT_DESC={'Any line':'Any row, column or diagonal','Four corners':'All four corner squares','Letter X':'Both diagonals','Full card':'Every square on the card'};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function bb(n){
+  if(!n)return '<div class="bb"><div class="f"><div class="h">Waiting for the first call</div></div></div>';
+  const l=letter(n);
+  return `<div class="bb" style="--c:${COL[l][0]};--cl:${l==='N'?'#555':COL[l][0]}"><div class="f"><div class="l">${l}</div><div class="n">${n}</div></div></div>`;
+}
+$('pboard').innerHTML=L.map((l,r)=>`<div class="prow"><div class="pl" style="--c:${COL[l][0]};--t:${COL[l][1]}">${l}</div>${Array.from({length:15},(_,i)=>{const n=r*15+i+1;return `<div class="pc" id="p${n}" style="--c:${COL[l][0]};--t:${COL[l][1]}">${n}</div>`}).join('')}</div>`).join('');
+function projRender(){
+  if(!projOpen)return;
+  if(pending&&!st.called.includes(pending)){pending=0;$('fly').style.display='none';$('flybg').classList.remove('on')}
+  const c=st.called,shownNums=pending?c.filter(n=>n!==pending):c,last=shownNums[shownNums.length-1];
+  const set=new Set(shownNums);
+  for(let n=1;n<=75;n++){const e=$('p'+n);e.classList.toggle('on',set.has(n));e.classList.toggle('last',n===last)}
+  $('pnow').innerHTML=bb(last);
+  $('pcount').innerHTML=`<b>${shownNums.length}</b> of 75 called`;
+  $('pnext').textContent=running&&timer?`Next call in ${left}s`:'';
+  $('precent').innerHTML=shownNums.slice(-6,-1).reverse().map(bb).join('');
+  const on=new Set(PAT_CELLS[st.pat]||[]);
+  $('pgrid').innerHTML=Array.from({length:25},(_,i)=>`<i class="${i===12&&st.pat!=='Full card'&&!on.has(12)?'free':on.has(i)?'on':''}"></i>`).join('');
+  $('ppat').textContent=st.pat;$('pdesc').textContent=PAT_DESC[st.pat]||'';
+  const auto=st.mode==='auto';
+  $('pNext').textContent=st.called.length>=75?'All called':c.length?'Next number':'Start calling';$('pNext').disabled=c.length>=75;
+  $('pPlay').hidden=!auto||!st.every;$('pPlay').textContent=running?'Pause':'Start auto';
+}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+function projShow(n){
+  pending=n;projRender();
+  const fly=$('fly');fly.innerHTML=bb(n);fly.style.display='block';$('flybg').classList.add('on');
+  fly.getAnimations().forEach(a=>a.cancel());
+  if(!reduce)fly.animate([
+    {transform:'translate(-50%,70vh) scale(.35) rotate(-240deg)',opacity:0},
+    {transform:'translate(-50%,-50%) scale(1.08) rotate(12deg)',opacity:1,offset:.72},
+    {transform:'translate(-50%,-50%) scale(1) rotate(0deg)',opacity:1}],{duration:950,easing:'cubic-bezier(.2,.8,.25,1)',fill:'forwards'});
+  else fly.style.transform='translate(-50%,-50%)';
+  return Date.now();
+}
+async function projLand(n,since){
+  const hold=2600-(Date.now()-since);if(hold>0)await wait(hold);
+  if(pending!==n)return;
+  const fly=$('fly'),cell=$('p'+n);
+  $('flybg').classList.remove('on');
+  if(projOpen&&!reduce){
+    const b=fly.firstElementChild.getBoundingClientRect(),t=cell.getBoundingClientRect();
+    const dx=t.left+t.width/2-(b.left+b.width/2),dy=t.top+t.height/2-(b.top+b.height/2),sc=Math.min(t.width,t.height)*1.15/b.height;
+    const a=fly.animate([
+      {transform:'translate(-50%,-50%) scale(1) rotate(0deg)'},
+      {transform:`translate(calc(-50% + ${dx*.5}px),calc(-50% + ${dy*.5-60}px)) scale(${(1+sc)/2}) rotate(-90deg)`,offset:.5},
+      {transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(${sc}) rotate(-180deg)`}],{duration:800,easing:'cubic-bezier(.45,0,.25,1)',fill:'forwards'});
+    try{await a.finished}catch(e){}
+  }
+  if(pending!==n)return;
+  fly.style.display='none';pending=0;projRender();
+  cell.classList.remove('pop');void cell.offsetWidth;cell.classList.add('pop');
+}
+function showBar(){$('pbar').classList.remove('hide');clearTimeout(barT);barT=setTimeout(()=>$('pbar').classList.add('hide'),4000)}
+function openProj(){
+  projOpen=true;pending=0;$('proj').hidden=false;$('fly').style.display='none';$('flybg').classList.remove('on');
+  if(matchMedia('(orientation: portrait)').matches)$('prot').classList.add('show');
+  try{const r=document.documentElement.requestFullscreen?.();r&&r.then(()=>{try{screen.orientation?.lock?.('landscape').catch(()=>{})}catch(e){}}).catch(()=>{})}catch(e){}
+  projRender();showBar();wake();
+}
+function closeProj(){
+  projOpen=false;pending=0;$('proj').hidden=true;$('fly').style.display='none';
+  try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
+}
+$('projBtn').addEventListener('click',openProj);
+$('pExit').addEventListener('click',closeProj);
+$('pNext').addEventListener('click',()=>{showBar();$('call').click()});
+$('pPlay').addEventListener('click',()=>{showBar();$('play').click();projRender()});
+$('protOk').addEventListener('click',()=>$('prot').classList.remove('show'));
+$('proj').addEventListener('click',e=>{if(!e.target.closest('.pbar'))showBar()});
+$('proj').addEventListener('mousemove',showBar);
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&projOpen){}});
 const dlg=$('dlg');
 $('reset').addEventListener('click',()=>{stopAuto();dlg.classList.add('open');$('no').focus()});
 $('no').addEventListener('click',()=>dlg.classList.remove('open'));
 dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.classList.remove('open')});
 $('yes').addEventListener('click',()=>{st.called=[];save();dlg.classList.remove('open');if(hasTTS)speechSynthesis.cancel();render(true)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')dlg.classList.remove('open')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){dlg.classList.remove('open');if(projOpen&&!document.fullscreenElement)closeProj()}if(projOpen&&(e.key===' '||e.key==='ArrowRight')){e.preventDefault();$('call').click()}});
 
 const start=d=>{if(d&&Array.isArray(d.called))st=Object.assign(st,d);render(false)};
 window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data);
