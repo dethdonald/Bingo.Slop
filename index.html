@@ -155,15 +155,17 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 .pnow .bb{--s:min(27vh,19vw)}
 .pmeta{display:flex;justify-content:space-between;gap:1vw;font-size:min(1.7vw,3.4vh);color:var(--soft);white-space:nowrap}
 .pmeta b{color:#fff}
-.ppat{display:flex;gap:1.4vw;align-items:center;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:2vh;padding:1.6vh 1.2vw}
+.ppat{display:flex;gap:1.4vw;align-items:center;width:100%;text-align:left;cursor:pointer;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:2vh;padding:1.6vh 1.2vw;transition:transform .15s,background-color .2s}
+.ppat:hover{background:rgba(0,0,0,.4)}
+.ppat:active{transform:scale(.97)}
+.ppat:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.ppat.swap .pgrid,.ppat.swap .pptext{animation:swap .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes swap{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
 .pgrid{display:grid;grid-template-columns:repeat(5,min(2.1vw,4.2vh));grid-auto-rows:min(2.1vw,4.2vh);gap:.4vh;flex:none}
 .pgrid i{border-radius:.5vh;background:rgba(255,255,255,.12)}
 .pgrid i.on{background:var(--gold)}
 .pgrid i.free{background:#fff}
-.pptext{display:grid;line-height:1.15}
-.pptext small{font-size:min(1.3vw,2.6vh);color:var(--soft)}
-.pptext b{font:800 min(2.4vw,4.8vh)/1.1 Rubik,sans-serif;color:var(--gold)}
-.pptext span{font-size:min(1.3vw,2.6vh);color:var(--soft)}
+.pptext{display:block;line-height:1.1;font:800 min(2.6vw,5.2vh)/1.1 Rubik,sans-serif;color:var(--gold)}
 .precent{display:flex;gap:.8vw}
 .precent .bb{--s:min(4.2vw,10vh)}
 .flybg{position:absolute;inset:0;background:rgba(3,20,15,.6);opacity:0;pointer-events:none;transition:opacity .45s}
@@ -301,7 +303,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <p class="note vhint" id="vhint">Voice options appear here when you switch to Voice caller.</p>
         <div class="field vonly"><span>Call the next number by itself</span><div class="chips" id="every"></div></div>
         <div class="field vonly"><label for="vsel">Voice</label><select id="vsel"><option value="__studio">George (natural studio voice)</option><option value="">Phone's default voice</option></select></div>
-        <div class="field vonly"><label for="rate">Speaking speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div class="ends"><span>Slower</span><span>Faster</span></div></div>
+        <div class="field vonly"><label for="rate">Speaking speed (phone voices)</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div class="ends"><span>Slower</span><span>Faster</span></div></div>
         <label class="check vonly"><input type="checkbox" id="style"> Caller style: “Under the B… 7”</label>
         <label class="check vonly"><input type="checkbox" id="digits"> Say digits separately: “one, five… fifteen”</label>
         <label class="check vonly"><input type="checkbox" id="twice"> Say each number twice</label>
@@ -341,7 +343,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 </svg><span>Bingo Slop</span></div>
     <div class="pnow"><div id="pnow"></div><div class="tumb ptumb" id="tumbProj" hidden aria-hidden="true"><canvas></canvas></div></div>
     <div class="pmeta"><span id="pcount"></span><span id="pnext"></span></div>
-    <div class="ppat"><div class="pgrid" id="pgrid"></div><div class="pptext"><small>Now playing</small><b id="ppat"></b><span id="pdesc"></span></div></div>
+    <button class="ppat" id="ppatBtn" aria-label="Change pattern"><div class="pgrid" id="pgrid"></div><b class="pptext" id="ppat"></b></button>
     <div class="precent" id="precent"></div>
     <div class="pctrl">
       <button class="call pcall" id="pNext"><span class="fill" id="pfill" aria-hidden="true"><svg class="wave back" viewBox="0 0 20 200" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H10Q20 12.5 10 25T10 50T10 75T10 100T10 125T10 150T10 175T10 200H0Z"/></svg><svg class="wave front" viewBox="0 0 20 200" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H10Q20 12.5 10 25T10 50T10 75T10 100T10 125T10 150T10 175T10 200H0Z"/></svg><span class="water"></span></span><span class="lbl" id="pNextLbl">Next number</span></button>
@@ -488,7 +490,7 @@ const studioOn=()=>st.vname==='__studio';
 function clipKeys(){
   const k=['test','bingo','winner','nobingo','nextup','nocalls','sample'].concat(PATS.map(p=>'ng_'+p));
   L.forEach(l=>k.push('under_'+l,'let_'+l));
-  for(let n=1;n<=75;n++){k.push('num_'+n,'rep_'+n);if(n>=10)k.push('dig_'+n)}
+  for(let n=1;n<=75;n++)k.push((st.twice?'calltwice_':'call_')+n);
   return k;
 }
 function loadClip(key){
@@ -520,7 +522,7 @@ async function playSeq(items){
     if(typeof b==='number'){await wait(b);continue}
     await new Promise(res=>{
       const s=a.createBufferSource();s.buffer=b;
-      s.playbackRate.value=Math.min(1.2,Math.max(0.8,(Number(st.rate)||0.85)/0.85));
+      s.playbackRate.value=1;
       s.connect(a.destination);s.onended=res;curSrc=s;s.start();
       setTimeout(res,b.duration*1000/s.playbackRate.value+400);
     });
@@ -528,10 +530,12 @@ async function playSeq(items){
   if(!studioHeard){studioHeard=true;vstat('Studio voice is working.')}
 }
 function callSeq(n){
-  const l=letter(n),seq=[st.style?'under_'+l:'let_'+l,260];
-  if(st.digits&&n>=10)seq.push('dig_'+n,320);
+  // default settings: one continuous recording, so it flows naturally
+  if(st.style&&(st.digits||n<10))return [(st.twice?'calltwice_':'call_')+n];
+  const l=letter(n),seq=[st.style?'under_'+l:'let_'+l,120];
+  if(st.digits&&n>=10)seq.push('dig_'+n,150);
   seq.push('num_'+n);
-  if(st.twice)seq.push(520,'rep_'+n);
+  if(st.twice)seq.push(300,'rep_'+n);
   return seq;
 }
 async function say(text){
@@ -710,7 +714,7 @@ function projRender(){
   $('precent').innerHTML=shownNums.slice(-6,-1).reverse().map(bb).join('');
   const on=new Set(PAT_CELLS[st.pat]||[]);
   $('pgrid').innerHTML=Array.from({length:25},(_,i)=>`<i class="${i===12&&st.pat!=='Full card'&&!on.has(12)?'free':on.has(i)?'on':''}"></i>`).join('');
-  $('ppat').textContent=st.pat;$('pdesc').textContent=PAT_DESC[st.pat]||'';
+  $('ppat').textContent=st.pat;
   const auto=st.mode==='auto';
   $('pNextLbl').textContent=st.called.length>=75?'All called':c.length?'Next number':'Start calling';$('pNext').disabled=c.length>=75;
   $('pPlay').hidden=!auto||!st.every;$('pPlay').textContent=running?'Pause':'Start auto';
@@ -756,6 +760,7 @@ function closeProj(){
   try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
 }
 $('projBtn').addEventListener('click',openProj);
+$('ppatBtn').addEventListener('click',()=>{st.pat=nextPat();save();render(false);const b=$('ppatBtn');b.classList.remove('swap');void b.offsetWidth;b.classList.add('swap')});
 $('pExit').addEventListener('click',closeProj);
 $('pNext').addEventListener('click',()=>$('call').click());
 $('pPlay').addEventListener('click',()=>{$('play').click();projRender()});
