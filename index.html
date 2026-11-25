@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a3a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bingo Slop">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Bingo Slop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@600;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE everyday, warm, very legible for a caller reading to an older crowd
+   IDEA a bingo hall: green felt table, glossy coloured balls, the caller's master board
+   PICTURE one huge glossy ball showing the current call, coloured by its letter
+   COLOUR felt green ground fixed in both themes, white ink, ball colours B blue I red N white G green O yellow
+   TYPE Rubik 800 for numbers, Atkinson Hyperlegible for words
+   LAYOUT phone: mode switch, ball, big button, settings, recent calls, board; wide: ball + controls left, board right */
+:root{color-scheme:dark;--felt:#0d4a3a;--felt2:#0a3a2e;--deep:#072b22;--ink:#ffffff;--soft:#cfe6dc;--line:rgba(255,255,255,.16);
+--B:#2f7fe0;--I:#e0423a;--N:#f4f4f0;--G:#2fb35a;--O:#f6b800;--gold:#ffd23f}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(120% 80% at 50% 0%,var(--felt) 0%,var(--felt2) 60%,var(--deep) 100%) fixed;background-color:var(--felt2);color:var(--ink);font:17px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif;overflow-x:clip;-webkit-tap-highlight-color:transparent}
+button,select{font:inherit;color:inherit;cursor:pointer}
+[hidden]{display:none!important}
+.wrap{max-width:1100px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(40px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+h1{font:800 28px/1.05 Rubik,sans-serif;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:10px}
+.logo{width:48px;height:48px;flex:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.count{color:var(--soft);font-size:17px;white-space:nowrap}
+.count b{color:var(--ink);font-size:20px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:16px;padding:4px;margin-bottom:8px}
+.seg button{min-height:48px;border:0;border-radius:12px;background:transparent;font-weight:700;font-size:17px}
+.seg button[aria-pressed=true]{background:#fff;color:var(--felt2)}
+.main{display:grid;gap:24px}
+@media(min-width:820px){.main{grid-template-columns:minmax(0,5fr) minmax(0,6fr);align-items:start}}
+.stage{display:grid;place-items:center;padding:8px 0 4px}
+.ball{--c:#5a7a70;width:min(68vw,280px);aspect-ratio:1;border-radius:50%;position:relative;display:grid;place-items:center;
+background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.75) 0 6%,rgba(255,255,255,0) 22%),radial-gradient(circle at 50% 55%,var(--c) 0 55%,color-mix(in srgb,var(--c) 60%,#000) 100%);
+box-shadow:0 18px 30px -12px rgba(0,0,0,.6),inset 0 -10px 24px rgba(0,0,0,.25)}
+.ball::after{content:"";position:absolute;left:12%;right:12%;bottom:-26px;height:16px;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(4px)}
+.face{width:64%;aspect-ratio:1;border-radius:50%;background:#fff;color:#111;display:grid;place-content:center;text-align:center;box-shadow:inset 0 3px 8px rgba(0,0,0,.18)}
+.face .l{font:800 clamp(28px,9vw,44px)/1 Rubik,sans-serif;color:var(--cl,#111)}
+.face .n{font:800 clamp(56px,19vw,96px)/.95 Rubik,sans-serif;letter-spacing:-.03em}
+.face .hint{font-size:16px;line-height:1.3;padding:0 10px;color:#333}
+.ball.pop{animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{0%{transform:scale(.6) rotate(-25deg);opacity:.3}100%{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){.ball.pop{animation:none}}
+.say{margin:30px 0 0;text-align:center;font-size:19px;color:var(--soft);min-height:1.5em}
+.call{display:block;width:100%;margin-top:14px;min-height:76px;border:0;border-radius:22px;background:var(--gold);color:#1a1300;font:800 28px/1 Rubik,sans-serif;box-shadow:0 6px 0 #b8901a,0 12px 20px -6px rgba(0,0,0,.5);transition:transform .08s}
+.call small{display:block;font:700 16px/1.2 "Atkinson Hyperlegible",sans-serif;margin-top:4px}
+.call:active{transform:translateY(4px);box-shadow:0 2px 0 #b8901a}
+.call:disabled{background:#6f8c82;color:#dfe;box-shadow:none;cursor:default}
+.call:focus-visible,.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.btn{flex:1 1 0;min-height:52px;border-radius:14px;border:1.5px solid var(--line);background:rgba(255,255,255,.07);font-weight:700;font-size:17px;padding:0 12px;white-space:nowrap}
+.btn[aria-pressed=true]{background:#fff;color:var(--felt2)}
+.btn.run{background:var(--I);border-color:var(--I)}
+.btn:disabled{opacity:.4;cursor:default}
+h2{font:600 19px/1.2 Rubik,sans-serif;margin:24px 0 10px}
+.panel{margin-top:18px;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:20px;padding:16px}
+.panel h2{margin-top:0}
+.field{margin-bottom:16px}
+.field>label,.field>span{display:block;font-weight:700;margin-bottom:6px}
+select{width:100%;min-height:50px;border-radius:12px;border:1.5px solid var(--line);background:#0a3a2e;padding:0 12px;font-size:16px}
+input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
+.ends{display:flex;justify-content:space-between;color:var(--soft);font-size:15px;margin-top:-6px}
+.check{display:flex;align-items:center;gap:12px;min-height:44px;font-size:17px;cursor:pointer}
+.check input{width:24px;height:24px;accent-color:var(--gold);flex:none}
+.recent{display:flex;gap:10px;flex-wrap:wrap;min-height:58px;align-items:center}
+.mini{--c:#888;width:56px;height:56px;border-radius:50%;display:grid;place-content:center;text-align:center;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.6) 0 8%,transparent 26%),var(--c);color:var(--t,#fff);font:800 13px/1 Rubik,sans-serif}
+.mini span{font-size:21px;display:block;margin-top:1px}
+.empty{color:var(--soft);font-size:16px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line);background:transparent;font-weight:700;font-size:16px;white-space:nowrap}
+.chip[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:#1a1300}
+.board{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:20px;padding:12px}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.hd{height:44px;border-radius:12px;display:grid;place-items:center;font:800 26px/1 Rubik,sans-serif;background:var(--c);color:var(--t,#fff)}
+.cell{height:40px;border-radius:10px;display:grid;place-items:center;font:600 19px/1 Rubik,sans-serif;color:rgba(255,255,255,.42);background:rgba(255,255,255,.05);font-variant-numeric:tabular-nums}
+.cell.on{background:var(--c);color:var(--t,#fff);font-weight:800}
+.cell.last{outline:3px solid var(--gold);outline-offset:1px}
+.note{color:var(--soft);font-size:15px;margin:10px 2px 0}
+.vstat{margin:14px 0 0;padding:10px 12px;border-radius:12px;background:rgba(255,210,63,.14);font-weight:700;font-size:16px}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;padding:20px;z-index:9}
+.dlg.open{display:grid}
+.box{background:#fff;color:#14201b;border-radius:22px;padding:24px;max-width:380px;width:100%}
+.box h3{font:800 24px/1.1 Rubik,sans-serif;margin:0 0 8px}
+.box p{margin:0 0 18px}
+.box .btn{border-color:#c9d4cf;background:#eef3f0;color:#14201b}
+.box .btn.go{background:#d8342b;border-color:#d8342b;color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs><clipPath id="bs-ball"><circle cx="50" cy="45" r="38"/></clipPath></defs>
+  <path fill="#f0b400" d="M56 81C58 86 58 89 58 92a6 6 0 0 0 12 0v-8c0-3 1-5 2-8z"/>
+  <circle cx="50" cy="45" r="38" fill="#f0b400"/>
+  <circle cx="46" cy="41" r="37" fill="#ffd23f" clip-path="url(#bs-ball)"/>
+  <ellipse cx="32" cy="22" rx="8" ry="5" fill="#fff" opacity=".65" transform="rotate(-35 32 22)"/>
+  <circle cx="50" cy="45" r="22" fill="#fff"/>
+  <text x="50" y="56" text-anchor="middle" font-family="Rubik, 'Arial Black', 'DejaVu Sans', sans-serif" font-weight="800" font-size="31" fill="#2f7fe0">B</text>
+</svg><span>Bingo Slop</span></h1>
+    <div class="count" id="count"></div>
+  </header>
+  <div class="seg" id="mode" role="group" aria-label="Mode">
+    <button data-m="manual">I'll call</button>
+    <button data-m="auto">Voice caller</button>
+  </div>
+  <div class="main">
+    <section class="left">
+      <div class="stage">
+        <div class="ball" id="ball"><div class="face" id="face"></div></div>
+      </div>
+      <p class="say" id="say"></p>
+      <button class="call" id="call">Call next number</button>
+      <div class="row">
+        <button class="btn" id="undo">Undo last</button>
+        <button class="btn" id="voice" aria-pressed="false">Read aloud</button>
+        <button class="btn" id="play" hidden>Start auto</button>
+        <button class="btn" id="reset">New game</button>
+      </div>
+
+      <div class="panel" id="autoPanel" hidden>
+        <h2>Voice caller settings</h2>
+        <div class="field"><span>Call the next number by itself</span><div class="chips" id="every"></div></div>
+        <div class="field"><label for="vsel">Voice</label><select id="vsel"><option>Phone's default voice</option></select></div>
+        <div class="field"><label for="rate">Speaking speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div class="ends"><span>Slower</span><span>Faster</span></div></div>
+        <label class="check"><input type="checkbox" id="style"> Caller style: “Under the B… 7”</label>
+        <label class="check"><input type="checkbox" id="twice"> Say each number twice</label>
+        <div class="row">
+          <button class="btn" id="repeat">Say it again</button>
+          <button class="btn" id="test">Test speaker</button>
+        </div>
+        <p class="vstat" id="vstat" role="status">Tap Test speaker to check the sound.</p>
+        <p class="note">Connect your phone to the Bluetooth speaker first. The voice plays through whatever your phone uses for sound. No sound on an iPhone? Turn off silent mode and turn the volume up.</p>
+      </div>
+
+      <h2>Last called</h2>
+      <div class="recent" id="recent"></div>
+      <h2>This game is for</h2>
+      <div class="chips" id="pats"></div>
+    </section>
+    <section>
+      <h2 style="margin-top:4px">Called numbers</h2>
+      <div class="board"><div class="grid" id="grid"></div></div>
+      <p class="note">When someone shouts bingo, pause, have them read their numbers back and check each one is lit up here.</p>
+    </section>
+  </div>
+</div>
+<div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dt">
+  <div class="box">
+    <h3 id="dt">Start a new game?</h3>
+    <p>This clears every number called so far.</p>
+    <div class="row">
+      <button class="btn" id="no">Keep playing</button>
+      <button class="btn go" id="yes">Start new game</button>
+    </div>
+  </div>
+</div>
+<script>
+{
+const L=['B','I','N','G','O'];
+const COL={B:['var(--B)','#fff'],I:['var(--I)','#fff'],N:['var(--N)','#1a1a1a'],G:['var(--G)','#fff'],O:['var(--O)','#1a1300']};
+const PATS=['Any line','Four corners','Letter X','Full card'];
+const EVERY=[0,10,15,20,30];
+const letter=n=>L[Math.floor((n-1)/15)];
+const KEY='bingo-slop-v1';
+let st={called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'',rate:0.85,twice:true,style:true};
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
+window.claude?.hot?.snapshot?.(()=>st);
+const $=id=>document.getElementById(id);
+const hasTTS='speechSynthesis' in window;
+let running=false,timer=null,left=0,speakTok=0,callId=0;
+
+// board: 5 columns (B I N G O), 15 rows
+let g=L.map(l=>`<div class="hd" style="--c:${COL[l][0]};--t:${COL[l][1]}">${l}</div>`).join('');
+for(let r=0;r<15;r++)for(let c=0;c<5;c++){const n=c*15+r+1,l=L[c];g+=`<div class="cell" id="c${n}" style="--c:${COL[l][0]};--t:${COL[l][1]}">${n}</div>`}
+$('grid').innerHTML=g;
+$('pats').innerHTML=PATS.map(p=>`<button class="chip" data-p="${p}">${p}</button>`).join('');
+$('every').innerHTML=EVERY.map(s=>`<button class="chip" data-s="${s}">${s?`Every ${s}s`:'Off'}</button>`).join('');
+
+// ---- voices
+let voices=[];
+function loadVoices(){
+  if(!hasTTS)return;
+  const all=speechSynthesis.getVoices();
+  voices=all.filter(v=>/^en/i.test(v.lang));if(!voices.length)voices=all;
+  const sel=$('vsel');
+  sel.innerHTML='<option value="">Phone\'s default voice</option>'+voices.map((v,i)=>{const o=document.createElement('option');o.value=v.name;o.textContent=`${v.name} (${v.lang})`;return o.outerHTML}).join('');
+  sel.value=voices.some(v=>v.name===st.vname)?st.vname:'';
+}
+if(hasTTS){loadVoices();try{speechSynthesis.addEventListener('voiceschanged',loadVoices)}catch(e){speechSynthesis.onvoiceschanged=loadVoices}}
+
+function phrase(n){
+  const l=letter(n);
+  const first=st.style?`Under the ${l}. ${n}.`:`${l}. ${n}.`;
+  return st.twice?`${first} ... ${l}, ${n}.`:first;
+}
+// Phones only allow speech after a tap: speak a silent utterance on the very first tap to unlock it.
+let unlocked=false,cur=null,heard=false;
+function unlock(){
+  if(unlocked||!hasTTS)return;unlocked=true;
+  try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;u.lang='en-US';speechSynthesis.speak(u)}catch(e){}
+}
+document.addEventListener('click',unlock,{capture:true});
+document.addEventListener('touchend',unlock,{capture:true});
+function vstat(msg){$('vstat').textContent=msg}
+// speaks text; resolves when finished (or after a safety timeout)
+function say(text){
+  return new Promise(res=>{
+    if(!hasTTS){vstat("This browser can't speak out loud. Use Safari on iPhone or Chrome on Android.");res();return}
+    ++speakTok;
+    let done=false;const fin=()=>{if(!done){done=true;res()}};
+    const go=()=>{
+      try{
+        const u=new SpeechSynthesisUtterance(text);
+        const v=voices.find(v=>v.name===st.vname);
+        if(v){u.voice=v;u.lang=v.lang}else u.lang='en-US';
+        u.rate=Number(st.rate)||0.85;u.volume=1;u.pitch=1;
+        u.onstart=()=>{if(!heard){heard=true;vstat('Voice is working.')}};
+        u.onend=fin;u.onerror=e=>{if(e&&e.error&&e.error!=='interrupted'&&e.error!=='canceled')vstat('The voice hit an error ('+e.error+'). Tap Test speaker to try again.');fin()};
+        cur=u; // keep a reference so the browser doesn't drop it mid-sentence
+        speechSynthesis.resume();
+        speechSynthesis.speak(u);
+        setTimeout(()=>{if(!heard)vstat('No voice started. Check silent mode and volume, then tap Test speaker.')},2500);
+        setTimeout(fin,Math.max(4000,text.length*160/u.rate));
+      }catch(e){vstat('The voice could not start in this browser.');fin()}
+    };
+    // cancelling and speaking in the same instant swallows the speech on iPhones, so leave a short gap
+    if(speechSynthesis.speaking||speechSynthesis.pending){speechSynthesis.cancel();setTimeout(go,150)}else go();
+  });
+}
+const voiceOn=()=>st.mode==='auto'||st.voice;
+
+function render(pop){
+  const c=st.called,last=c[c.length-1],auto=st.mode==='auto';
+  $('count').innerHTML=`<b>${c.length}</b> of 75 called`;
+  document.querySelectorAll('#mode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===st.mode));
+  const ball=$('ball'),face=$('face');
+  if(last){
+    const l=letter(last);
+    ball.style.setProperty('--c',COL[l][0]);
+    face.innerHTML=`<div class="l" style="--cl:${l==='N'?'#555':COL[l][0]}">${l}</div><div class="n">${last}</div>`;
+    $('say').textContent=`“${l} ${last}”`;
+  }else{
+    ball.style.setProperty('--c','#5a7a70');
+    face.innerHTML=`<div class="hint">Tap the yellow button to call the first number</div>`;
+    $('say').textContent='';
+  }
+  if(pop){ball.classList.remove('pop');void ball.offsetWidth;ball.classList.add('pop')}
+  const done=c.length>=75;
+  const cb=$('call');cb.disabled=done;
+  if(done)cb.textContent='All 75 called';
+  else if(auto){cb.innerHTML=c.length?'Next number':'Start calling';if(running&&timer)cb.innerHTML+=`<small>Next call in ${left}s</small>`;else if(running)cb.innerHTML+='<small>Calling…</small>'}
+  else cb.textContent='Call next number';
+  $('undo').disabled=!c.length;
+  $('voice').hidden=auto;$('voice').setAttribute('aria-pressed',st.voice);
+  $('play').hidden=!auto||!st.every||done;
+  $('play').textContent=running?'Pause':'Start auto';$('play').classList.toggle('run',running);
+  $('autoPanel').hidden=!auto;
+  document.querySelectorAll('#every .chip').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.s)===st.every));
+  $('rate').value=st.rate;$('twice').checked=st.twice;$('style').checked=st.style;
+  const rec=c.slice(-6,-1).reverse();
+  $('recent').innerHTML=rec.length?rec.map(n=>{const l=letter(n);return `<div class="mini" style="--c:${COL[l][0]};--t:${COL[l][1]}">${l}<span>${n}</span></div>`}).join(''):'<span class="empty">Earlier calls show up here.</span>';
+  const set=new Set(c);
+  for(let n=1;n<=75;n++){const e=$('c'+n);e.classList.toggle('on',set.has(n));e.classList.toggle('last',n===last)}
+  document.querySelectorAll('#pats .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===st.pat));
+}
+
+let lock=null;
+async function wake(){try{if(!lock&&navigator.wakeLock){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>lock=null)}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&st.called.length)wake()});
+
+function clearTimer(){if(timer){clearInterval(timer);timer=null}}
+function stopAuto(){running=false;clearTimer();render(false)}
+function countdown(){
+  clearTimer();
+  if(!running||st.mode!=='auto'||!st.every||st.called.length>=75){if(st.called.length>=75)running=false;render(false);return}
+  left=st.every;render(false);
+  timer=setInterval(()=>{left--;if(left<=0){clearTimer();callNext()}else render(false)},1000);
+}
+async function callNext(){
+  clearTimer();
+  const set=new Set(st.called),pool=[];
+  for(let n=1;n<=75;n++)if(!set.has(n))pool.push(n);
+  if(!pool.length){running=false;render(false);return}
+  let i;
+  if(window.crypto?.getRandomValues){const a=new Uint32Array(1);crypto.getRandomValues(a);i=a[0]%pool.length}else i=Math.floor(Math.random()*pool.length);
+  const n=pool[i];st.called.push(n);save();render(true);wake();
+  const id=++callId;
+  if(voiceOn())await say(phrase(n));
+  if(id!==callId)return;
+  if(running)countdown();
+}
+
+$('call').addEventListener('click',()=>{if(st.mode==='auto'&&st.every&&!running)running=true;callNext()});
+$('play').addEventListener('click',()=>{if(running){stopAuto();if(hasTTS)speechSynthesis.cancel()}else{running=true;if(!st.called.length)callNext();else{say('Next number coming up.');countdown()}}});
+$('undo').addEventListener('click',()=>{if(!st.called.length)return;stopAuto();if(hasTTS)speechSynthesis.cancel();st.called.pop();save();render(false)});
+$('voice').addEventListener('click',()=>{st.voice=!st.voice;save();render(false);const n=st.called[st.called.length-1];if(st.voice&&n)say(phrase(n))});
+$('say').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)say(phrase(n))});
+$('repeat').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)say(phrase(n));else say('No numbers called yet.')});
+$('test').addEventListener('click',()=>say("Hello everyone, welcome to Bingo Slop! Eyes down, here we go."));
+$('mode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.mode=b.dataset.m;if(st.mode!=='auto')stopAuto();save();render(false)});
+$('every').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.every=Number(b.dataset.s);save();if(!st.every)stopAuto();else if(running)countdown();else render(false)});
+$('vsel').addEventListener('change',e=>{st.vname=e.target.value;save();say('This is how I will sound.')});
+$('rate').addEventListener('change',e=>{st.rate=Number(e.target.value);save();say('Under the B. 7.')});
+$('twice').addEventListener('change',e=>{st.twice=e.target.checked;save()});
+$('style').addEventListener('change',e=>{st.style=e.target.checked;save()});
+$('pats').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.pat=b.dataset.p;save();render(false)});
+const dlg=$('dlg');
+$('reset').addEventListener('click',()=>{stopAuto();dlg.classList.add('open');$('no').focus()});
+$('no').addEventListener('click',()=>dlg.classList.remove('open'));
+dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.classList.remove('open')});
+$('yes').addEventListener('click',()=>{st.called=[];save();dlg.classList.remove('open');if(hasTTS)speechSynthesis.cancel();render(true)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')dlg.classList.remove('open')});
+
+const start=d=>{if(d&&Array.isArray(d.called))st=Object.assign(st,d);render(false)};
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Bingo Slop logo">
+  <defs><clipPath id="bs-ball"><circle cx="50" cy="45" r="38"/></clipPath></defs>
+  <path fill="#f0b400" d="M56 81C58 86 58 89 58 92a6 6 0 0 0 12 0v-8c0-3 1-5 2-8z"/>
+  <circle cx="50" cy="45" r="38" fill="#f0b400"/>
+  <circle cx="46" cy="41" r="37" fill="#ffd23f" clip-path="url(#bs-ball)"/>
+  <ellipse cx="32" cy="22" rx="8" ry="5" fill="#fff" opacity=".65" transform="rotate(-35 32 22)"/>
+  <circle cx="50" cy="45" r="22" fill="#fff"/>
+  <text x="50" y="56" text-anchor="middle" font-family="Rubik, 'Arial Black', 'DejaVu Sans', sans-serif" font-weight="800" font-size="31" fill="#2f7fe0">B</text>
+</svg>
