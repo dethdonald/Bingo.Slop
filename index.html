@@ -268,6 +268,10 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 @keyframes nicePop{0%{transform:translate(-50%,-50%) scale(0) rotate(-20deg);opacity:1}20%{transform:translate(-50%,-50%) scale(1.15) rotate(-6deg);opacity:1}30%{transform:translate(-50%,-50%) scale(1) rotate(-8deg)}80%{transform:translate(-50%,-50%) scale(1.05) rotate(-8deg);opacity:1}100%{transform:translate(-50%,-50%) scale(.6) rotate(-8deg);opacity:0}}
 .ver{position:fixed;left:max(8px,env(safe-area-inset-left));bottom:max(6px,env(safe-area-inset-bottom));z-index:22;border:0;background:none;padding:2px 4px;font:600 11px/1.2 Rubik,sans-serif;color:var(--soft);opacity:.45;cursor:default}
 .ver.upd{opacity:1;color:var(--btnink);background:var(--gold);border-radius:8px;padding:4px 8px;cursor:pointer}
+body.proj-on .wrap{display:none}
+.fly{will-change:transform}
+.wave{animation-play-state:paused}
+.fill.on .wave{animation-play-state:running}
 .confetti{position:fixed;inset:0;width:100%;height:100%;z-index:30;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.bgword b,.bingo.won .bgword b{animation:none}}
 .prot{position:absolute;inset:0;z-index:6;display:none;place-content:center;justify-items:center;gap:10px;text-align:center;padding:12px;background:rgba(3,20,15,.95);font-size:16px}
@@ -455,6 +459,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
+let cssCache={},cdStart=0,cdDur=1;
 let st={edgy:true,music:true,wacky:true,voiceOff:false,ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 if(!st.cdSound)st.cdSound=st.tick===false?'off':'tick';
@@ -740,6 +745,7 @@ function ttsSay(text){
 }
 const voiceOn=()=>!st.voiceOff&&(st.mode==='auto'||st.voice);
 
+function setHTML(el,h){if(el._h!==h){el._h=h;el.innerHTML=h}}
 function render(pop){
   const c=st.called,last=c[c.length-1],auto=st.mode==='auto';
   $('count').innerHTML=`<b>${c.length}</b> of 75 called`;
@@ -784,6 +790,7 @@ async function wake(){try{if(!lock&&navigator.wakeLock){lock=await navigator.wak
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&st.called.length)wake()});
 
 function fillStart(sec){
+  try{tumbWake()}catch(e){}
   cdStart=performance.now();cdDur=sec*1000;
   document.querySelectorAll('.fill').forEach(f=>{
     f.classList.remove('drain','on');f.style.transition='none';
@@ -860,6 +867,7 @@ function applyVoiceSw(){
 }
 $('voiceSw').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.voiceOff=b.dataset.v==='off';save();applyVoiceSw();render(false);if(st.voiceOff)stopVoice()});
 function applySkin(){
+  cssCache={};try{tumbs.forEach(T=>{T.cols=tumbColors();T.idleDrawn=false});tumbWake()}catch(e){}
   const v=st.skin==='vegas';
   if(v)document.documentElement.dataset.skin='vegas';else delete document.documentElement.dataset.skin;
   document.querySelector('meta[name=theme-color]').content=v?'#2b0307':'#0a3a2e';
@@ -887,12 +895,12 @@ function projRender(){
   const c=st.called,shownNums=pending?c.filter(n=>n!==pending):c,last=shownNums[shownNums.length-1];
   const set=new Set(shownNums);
   for(let n=1;n<=75;n++){const e=$('p'+n);e.classList.toggle('on',set.has(n));e.classList.toggle('last',n===last)}
-  $('pnow').innerHTML=bb(last);
+  setHTML($('pnow'),bb(last));
   $('pcount').innerHTML=`<b>${shownNums.length}</b> of 75 called`;
   $('pnext').textContent=running&&timer?`Next call in ${left}s`:'';
-  $('precent').innerHTML=shownNums.slice(-6,-1).reverse().map(bb).join('');
+  setHTML($('precent'),shownNums.slice(-6,-1).reverse().map(bb).join(''));
   const on=new Set(PAT_CELLS[st.pat]||[]);
-  $('pgrid').innerHTML=Array.from({length:25},(_,i)=>`<i class="${i===12&&st.pat!=='Full card'&&!on.has(12)?'free':on.has(i)?'on':''}"></i>`).join('');
+  setHTML($('pgrid'),Array.from({length:25},(_,i)=>`<i class="${i===12&&st.pat!=='Full card'&&!on.has(12)?'free':on.has(i)?'on':''}"></i>`).join(''));
   $('ppat').textContent=st.pat;
   const auto=st.mode==='auto';
   $('pNextLbl').textContent=st.called.length>=75?'All called':c.length?'Next number':'Start calling';$('pNext').disabled=c.length>=75;
@@ -911,12 +919,13 @@ function projShow(n){
 // ================= Wacky animations: rare comic gags as the ball heads to the board =================
 const easeOut=t=>1-(1-t)**3,easeIn=t=>t*t*t,easeIO=t=>t<.5?4*t*t*t:1-((-2*t+2)**3)/2,clamp01=t=>Math.max(0,Math.min(1,t));
 const seg=(t,a,b)=>clamp01((t-a)/(b-a));
+let gagScale=1;
+function wackySize(cv,W,H){const dpr=canvasDpr(W,H)*gagScale;cv._dpr=dpr;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);return ctx}
 function wackyCanvas(){
-  const cv=$('wacky'),p=$('proj'),W=p.clientWidth,H=p.clientHeight,dpr=canvasDpr(W,H);cv._dpr=dpr;
-  cv.width=W*dpr;cv.height=H*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);cv.style.display='block';
+  const cv=$('wacky'),p=$('proj'),W=p.clientWidth,H=p.clientHeight,ctx=wackySize(cv,W,H);cv.style.display='block';
   return {cv,ctx,W,H};
 }
-function cssv(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function cssv(v){if(!(v in cssCache))cssCache[v]=getComputedStyle(document.documentElement).getPropertyValue(v).trim();return cssCache[v]}
 let WTRACK=null,CAM=null;
 function drawBall(ctx,x,y,r,n,rot){
   if(WTRACK&&CAM&&n===WTRACK.n){
@@ -2402,10 +2411,11 @@ function wackyPlay(n,keyName){
     const fr=$('fly').firstElementChild.getBoundingClientRect(),pr=$('proj').getBoundingClientRect();
     const b={x:fr.left-pr.left+fr.width/2,y:fr.top-pr.top+fr.height/2,r:fr.width/2};
     $('fly').style.display='none';
-    const t0=performance.now(),Z=WZOOM[key]||1.7;
+    const t0=performance.now(),Z=WZOOM[key]||1.7,FT=[];
     let camX=b.x,camY=b.y,lastT=0;WTRACK={n,x:b.x,y:b.y,got:0};
     const frame=now=>{
       const t=(now-t0)/1000,dt=Math.min(.05,t-lastT);lastT=t;
+      if(t>.4){FT.push(dt);if(FT.length>=24){const avg=FT.reduce((a,v)=>a+v,0)/FT.length;FT.length=0;if(avg>.021&&gagScale>.56){gagScale=Math.max(.55,gagScale*.85);wackySize(cv,W,H)}}}
       if(pending!==n||!projOpen||t>sc.dur){ctx.clearRect(0,0,W,H);cv.style.display='none';cv.style.filter='';WTRACK=null;CAM=null;if(sc.end)try{sc.end.call(S)}catch(e){}res();return}
       // camera: ease in to a close-up and smoothly follow the ball, never showing past the edges
       const z=1+(Z-1)*easeIO(seg(t,0,.8)),k=Math.min(1,dt*4.5);
@@ -2448,11 +2458,12 @@ function openProj(){
   projOpen=true;pending=0;$('proj').hidden=false;$('projbars').hidden=false;$('fly').style.display='none';$('flybg').classList.remove('on');
   if(matchMedia('(orientation: portrait)').matches)$('prot').classList.add('show');
   try{const r=document.documentElement.requestFullscreen?.();r&&r.then(()=>{try{screen.orientation?.lock?.('landscape').catch(()=>{})}catch(e){}}).catch(()=>{})}catch(e){}
-  projRender();wake();
+  document.body.classList.add('proj-on');projRender();wake();try{tumbs.forEach(T=>T.idleDrawn=false);tumbWake()}catch(e){}
 }
 function closeProj(){
   projOpen=false;pending=0;$('proj').hidden=true;$('projbars').hidden=true;$('fly').style.display='none';
-  try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
+  document.body.classList.remove('proj-on');try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
+  try{tumbs.forEach(T=>T.idleDrawn=false);tumbWake()}catch(e){}
 }
 $('projBtn').addEventListener('click',openProj);
 $('ppatBtn').addEventListener('click',()=>{st.pat=nextPat();save();render(false);const b=$('ppatBtn');b.classList.remove('swap');void b.offsetWidth;b.classList.add('swap')});
@@ -2462,17 +2473,18 @@ $('pPlay').addEventListener('click',()=>{$('play').click();projRender()});
 $('protOk').addEventListener('click',()=>$('prot').classList.remove('show'));
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&projOpen){}});
 // ================= Tumbler: a spinning bingo cage with light ball physics =================
-let cdStart=0,cdDur=1;
+
 const TUMB_N=22,TUMB_R=0.14;
 // pixel budget: full sharpness on phones/laptops, capped on large high-DPI monitors
 function canvasDpr(w,h,budget){const d=Math.min(2,window.devicePixelRatio||1);return Math.max(.75,Math.min(d,Math.sqrt((budget||3.7e6)/Math.max(1,w*h))))}
-function tumbColors(){const cs=getComputedStyle(document.documentElement);return ['--B','--I','--N','--G','--O'].map(v=>cs.getPropertyValue(v).trim()||'#888')}
+const ballSprites=new Map();
+function tumbColors(){return ['--B','--I','--N','--G','--O'].map(v=>cssv(v)||'#888')}
 function makeTumbler(wrap){
   const cv=wrap.querySelector('canvas'),ctx=cv.getContext('2d');
   const balls=[];
   for(let i=0;i<TUMB_N;i++){const a=Math.random()*6.28,d=Math.random()*0.6;balls.push({x:Math.cos(a)*d,y:0.3+Math.sin(a)*d*0.5,vx:0,vy:0,c:i%5})}
   const T={wrap,cv,ctx,balls,theta:0,w:0,eject:null,tray:null,W:0,H:0,cols:tumbColors(),frame:0};
-  const size=()=>{T.W=wrap.clientWidth;T.H=wrap.clientHeight;const dpr=canvasDpr(T.W,T.H,6e5);T.idleDrawn=false;cv.width=Math.max(1,T.W*dpr);cv.height=Math.max(1,T.H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)};
+  const size=()=>{T.W=wrap.clientWidth;T.H=wrap.clientHeight;const dpr=canvasDpr(T.W,T.H,6e5);T.idleDrawn=false;try{tumbWake()}catch(e){}cv.width=Math.max(1,T.W*dpr);cv.height=Math.max(1,T.H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)};
   T.ro=new ResizeObserver(size);T.ro.observe(wrap);size();
   return T;
 }
@@ -2507,7 +2519,7 @@ function tumbDraw(T,now){
   if(++T.frame%45===0)T.cols=tumbColors();
   ctx.clearRect(0,0,W,H);
   const R=Math.min(W*0.36,H*0.4),cx=W*0.42,cy=H*0.44,rb=TUMB_R*R;
-  const gold=getComputedStyle(document.documentElement).getPropertyValue('--gold').trim()||'#ffd23f';
+  const gold=cssv('--gold')||'#ffd23f';
   // stand and base
   ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.ellipse(cx,H*0.95,R*1.05,H*0.035,0,0,6.28);ctx.fill();
   ctx.strokeStyle=gold;ctx.lineWidth=Math.max(3,R*0.07);ctx.lineCap='round';
@@ -2520,8 +2532,12 @@ function tumbDraw(T,now){
   // glass back
   const g=ctx.createRadialGradient(cx-R*0.3,cy-R*0.4,R*0.1,cx,cy,R);g.addColorStop(0,'rgba(255,255,255,.16)');g.addColorStop(1,'rgba(255,255,255,.04)');
   ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,6.28);ctx.fill();
-  const ball=(x,y,c)=>{const gg=ctx.createRadialGradient(x-rb*.35,y-rb*.4,rb*.1,x,y,rb);gg.addColorStop(0,'#fff');gg.addColorStop(.35,c);gg.addColorStop(1,c);
-    ctx.fillStyle=gg;ctx.beginPath();ctx.arc(x,y,rb,0,6.28);ctx.fill();ctx.fillStyle='rgba(255,255,255,.9)';ctx.beginPath();ctx.arc(x,y,rb*.42,0,6.28);ctx.fill()};
+  // each ball colour is shaded once into a small image, then just stamped every frame
+  const k=ctx.getTransform().a||1,key=c=>c+'|'+Math.round(rb*k);
+  const sprite=c=>{let sp=ballSprites.get(key(c));if(!sp){const px=Math.ceil(rb*k)*2+2,r=px/2-1;sp=document.createElement('canvas');sp.width=sp.height=px;const x=sp.getContext('2d');
+    const gg=x.createRadialGradient(px/2-r*.35,px/2-r*.4,r*.1,px/2,px/2,r);gg.addColorStop(0,'#fff');gg.addColorStop(.35,c);gg.addColorStop(1,c);x.fillStyle=gg;x.beginPath();x.arc(px/2,px/2,r,0,6.28);x.fill();
+    x.fillStyle='rgba(255,255,255,.9)';x.beginPath();x.arc(px/2,px/2,r*.42,0,6.28);x.fill();if(ballSprites.size>80)ballSprites.clear();ballSprites.set(key(c),sp)}return sp};
+  const ball=(x,y,c)=>ctx.drawImage(sprite(c),x-rb,y-rb,rb*2,rb*2);
   for(const b of T.balls)ball(cx+b.x*R,cy+b.y*R,T.cols[b.c]);
   // rotating cage bars over the balls
   ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=Math.max(1.5,R*0.025);
@@ -2535,26 +2551,28 @@ function tumbDraw(T,now){
   else if(T.tray)ball(ex,ey,T.tray);
 }
 const tumbs=[makeTumbler($('tumbMain')),makeTumbler($('tumbProj'))];
-function tumbEject(n){const l=letter(n),cs=getComputedStyle(document.documentElement),c=cs.getPropertyValue('--'+l).trim()||'#fff';
+function tumbEject(n){const l=letter(n),c=cssv('--'+l)||'#fff';tumbWake();
   for(const T of tumbs){T.eject={t:performance.now(),c};const b=T.balls[(Math.random()*T.balls.length)|0];b.vy-=4;b.vx+=2}}
 function tumbIntensity(){if(reduce||!running||!timer||!cdStart)return 0;return Math.min(1,Math.max(0,(performance.now()-cdStart)/cdDur))}
-let tumbLast=performance.now();
+let tumbLast=performance.now(),tumbRun=0;
+// the cage only animates while it's visible and something is moving; otherwise no frames are requested at all
+function tumbWake(){if(!tumbRun){tumbLast=performance.now();tumbRun=requestAnimationFrame(tumbLoop)}}
 function tumbLoop(now){
   const dt=Math.min(1/30,(now-tumbLast)/1000);tumbLast=now;
-  const inten=tumbIntensity();
+  const inten=tumbIntensity();let again=false;
   tumbs.forEach((T,i)=>{
-    const vis=!T.wrap.hidden&&(i===1?projOpen:!projOpen);
+    const vis=!T.wrap.hidden&&(i===1?projOpen:!projOpen)&&T.W>0;
     if(!vis)return;
-    const moving=inten>0||T.w>.01||T.eject||T.balls.some(b=>Math.abs(b.vx)+Math.abs(b.vy)>.03);
-    if(!moving&&T.idleDrawn&&(++T.idleTick%60))return;
+    const moving=inten>0||T.w>.01||!!T.eject||T.balls.some(b=>Math.abs(b.vx)+Math.abs(b.vy)>.03);
+    if(!moving&&T.idleDrawn)return;
     if(!reduce){tumbStep(T,dt/2,inten);tumbStep(T,dt/2,inten)}
-    tumbDraw(T,now);T.idleDrawn=!moving;T.idleTick=T.idleTick||0;
+    tumbDraw(T,now);T.idleDrawn=!moving;if(moving)again=true;
   });
-  requestAnimationFrame(tumbLoop);
+  tumbRun=again?requestAnimationFrame(tumbLoop):0;
 }
-requestAnimationFrame(tumbLoop);
+tumbWake();
 // ---- version label, and a quiet check for a newer published version
-const APP_VERSION='v1.45';
+const APP_VERSION='v1.46';
 $('ver').textContent=APP_VERSION;
 async function checkVersion(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();
   if(j&&j.v&&j.v!==APP_VERSION){const b=$('ver');b.classList.add('upd');b.textContent='Update available ('+String(j.v).slice(0,12)+') — tap to refresh';b.onclick=()=>location.reload()}}catch(e){}}
@@ -2592,8 +2610,10 @@ function fanfare(big){
 // ---- shared particle canvas: confetti from the corners and sparkle bursts
 const parts=[];let partRun=0,cW=0,cH=0;
 function partCanvas(){const cv=$('confetti'),dpr=canvasDpr(innerWidth,innerHeight,1.6e6);if(cW!==innerWidth||cH!==innerHeight){cW=innerWidth;cH=innerHeight;cv.width=cW*dpr;cv.height=cH*dpr;cv.getContext('2d').setTransform(dpr,0,0,dpr,0,0)}return cv.getContext('2d')}
-function partCols(){const cs=getComputedStyle(document.documentElement);return ['--B','--I','--G','--O','--gold'].map(v=>cs.getPropertyValue(v).trim()).concat(['#ffffff'])}
+function partCols(){return ['--B','--I','--G','--O','--gold'].map(v=>cssv(v)).concat(['#ffffff'])}
 function star(ctx,r){ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,rr=i%2?r*.32:r;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}ctx.closePath();ctx.fill()}
+const starSprites={};
+function starSprite(col){if(!starSprites[col]){const cv=document.createElement('canvas');cv.width=cv.height=48;const x=cv.getContext('2d');x.translate(24,24);x.shadowColor='#ffe07a';x.shadowBlur=8;x.fillStyle=col;star(x,14);starSprites[col]=cv}return starSprites[col]}
 function partLoop(){
   const ctx=partCanvas();ctx.clearRect(0,0,cW,cH);
   for(let i=parts.length-1;i>=0;i--){const p=parts[i];
@@ -2602,7 +2622,7 @@ function partLoop(){
     if(p.y>cH+30||(p.k==='s'&&p.life<=0)){parts.splice(i,1);continue}
     ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;
     if(p.k==='c'){ctx.scale(Math.cos(p.sw),1);ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h)}
-    else{ctx.globalAlpha=Math.min(1,p.life/20);ctx.shadowColor='#ffe07a';ctx.shadowBlur=8;star(ctx,p.w*(0.6+0.4*Math.sin(p.life*.4)))}
+    else{ctx.globalAlpha=Math.min(1,p.life/20);const k=p.w*(0.6+0.4*Math.sin(p.life*.4))/14;ctx.drawImage(starSprite(p.c),-24*k,-24*k,48*k,48*k)}
     ctx.restore()}
   partRun=parts.length?requestAnimationFrame(partLoop):0;
 }
