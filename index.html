@@ -347,6 +347,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         <div class="sbody" id="sbody"><div class="sinner" id="sinner">
         <div class="field"><span>Bingo music</span><div class="chips" id="musicSw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div></div>
         <div class="field"><span>Wacky animations</span><div class="chips" id="wackySw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div></div>
+        <div class="field"><span>Include violent or edgy gags</span><div class="chips" id="edgySw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div><p class="note">Off skips the robber, cellar, shower, hallway brawl, ocean liner epic and car crash.</p></div>
         <div class="field"><span>Announcer voice</span><div class="chips" id="voiceSw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div></div>
         <div class="field"><span>Projector screen shape</span><div class="chips" id="ratios"><button class="chip" data-r="16:9">16:9 TV</button><button class="chip" data-r="16:10">16:10</button><button class="chip" data-r="4:3">4:3</button><button class="chip" data-r="fill">Fill screen</button></div></div>
         <div class="field"><span>Theme</span><div class="chips" id="skins"><button class="chip" data-k="classic">Classic green</button><button class="chip" data-k="vegas">Darlene's Vegas</button></div></div>
@@ -460,7 +461,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={music:true,wacky:true,voiceOff:false,ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
+let st={edgy:true,music:true,wacky:true,voiceOff:false,ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 if(!st.cdSound)st.cdSound=st.tick===false?'off':'tick';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
@@ -855,6 +856,8 @@ function applyRatio(){
 $('ratios').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.ratio=b.dataset.r;save();applyRatio()});
 function applyMusicSw(){document.querySelectorAll('#musicSw .chip').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='on')===(st.music!==false)))}
 $('musicSw').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.music=b.dataset.v==='on';save();applyMusicSw();if(!st.music)musicStop(0.2)});
+function applyEdgySw(){document.querySelectorAll('#edgySw .chip').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='on')===(st.edgy!==false)))}
+$('edgySw').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.edgy=b.dataset.v==='on';save();applyEdgySw()});
 function applyWackySw(){document.querySelectorAll('#wackySw .chip').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='on')===!!st.wacky))}
 $('wackySw').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.wacky=b.dataset.v==='on';save();applyWackySw()});
 function applyVoiceSw(){
@@ -869,7 +872,7 @@ function applySkin(){
   document.querySelectorAll('#skins .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===st.skin));
 }
 $('skins').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.skin=b.dataset.k;save();applySkin()});
-applySkin();applyRatio();applyVoiceSw();applyWackySw();applyMusicSw();
+applySkin();applyRatio();applyVoiceSw();applyWackySw();applyMusicSw();applyEdgySw();
 function setOpen(o){st.setOpen=o;save();$('autoPanel').classList.toggle('open',o);$('stoggle').setAttribute('aria-expanded',o);$('sinner').inert=!o}
 $('stoggle').addEventListener('click',()=>setOpen(!st.setOpen));
 setOpen(!!st.setOpen);
@@ -1712,6 +1715,8 @@ Object.assign(WACKY,{
   }}
 });
 // how close the camera gets for each gag (default 1.7x); machine-sized scenes get less
+// gags hidden when 'violent or edgy' is off
+const EDGY=new Set(['robber','cellar','shower','hallway','titanic','car']);
 const WZOOM={closet:1,shower:1.15,cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
 // ---- the epic: two balls on an ocean liner, three scenes, original sad song
 function linerPart(c,side,W,U,crackK){
@@ -1984,15 +1989,15 @@ async function devPreview(key){
   return projOpen;
 }
 function devBuild(){
-  $('devGrid').innerHTML=['nice'].concat(Object.keys(WACKY).filter(k=>k!=='nice')).map(k=>`<button class="chip" data-g="${k}">${esc(GAGNAME[k]||k)}</button>`).join('');
+  $('devGrid').innerHTML=['nice'].concat(Object.keys(WACKY).filter(k=>k!=='nice')).map(k=>`<button class="chip" data-g="${k}">${esc(GAGNAME[k]||k)}${EDGY.has(k)?' \u26A0\uFE0F':''}</button>`).join('');
 }
 $('devBtn').addEventListener('click',()=>{const o=$('devBody').hidden;$('devBody').hidden=!o;$('devBtn').setAttribute('aria-expanded',o);if(o)devBuild()});
 $('devGrid').addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(b)devPreview(b.dataset.g)});
-$('devRandom').addEventListener('click',()=>devPreview(pick(Object.keys(WACKY).filter(k=>k!=='nice'))));
+$('devRandom').addEventListener('click',()=>devPreview(pick(Object.keys(WACKY).filter(k=>k!=='nice'&&(st.edgy!==false||!EDGY.has(k))))));
 $('devAll').addEventListener('click',async()=>{for(const k of Object.keys(WACKY).filter(k=>k!=='nice')){if(!(await devPreview(k)))break;await wait(400)}});
 function wackyPlay(n,keyName){
   return new Promise(res=>{
-    const keys=Object.keys(WACKY).filter(k=>k!==lastWacky&&k!=='nice'),key=keyName||(WACKY[window.__forceWacky]?window.__forceWacky:pick(keys)),sc=WACKY[key],S={},S2={},{cv,ctx,W,H}=wackyCanvas();lastWacky=key;
+    const keys=Object.keys(WACKY).filter(k=>k!==lastWacky&&k!=='nice'&&(st.edgy!==false||!EDGY.has(k))),key=keyName||(WACKY[window.__forceWacky]?window.__forceWacky:pick(keys)),sc=WACKY[key],S={},S2={},{cv,ctx,W,H}=wackyCanvas();lastWacky=key;
     const fr=$('fly').firstElementChild.getBoundingClientRect(),pr=$('proj').getBoundingClientRect();
     const b={x:fr.left-pr.left+fr.width/2,y:fr.top-pr.top+fr.height/2,r:fr.width/2};
     $('fly').style.display='none';
