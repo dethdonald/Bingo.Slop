@@ -2346,8 +2346,9 @@ WACKY.kaiju={dur:13.6,end(){try{$('wacky').style.filter=''}catch(e){}},draw(c,W,
 }};
 // ---- press conference: the Big Cheese ball loses his toupee (original character)
 function toupee(c,x,y,r,rot){c.save();c.translate(x,y);c.rotate(rot||0);
-  for(let i=0;i<9;i++){const a=Math.PI*(1.05+i*.11);circ(c,Math.cos(a)*r*.62,Math.sin(a)*r*.5,r*.26,i%2?'#4a2c17':'#5b3820')}
-  ell(c,0,-r*.22,r*.78,r*.32,'#5b3820');for(let i=0;i<6;i++){c.strokeStyle='#3a2210';c.lineWidth=r*.05;c.beginPath();c.arc(-r*.5+i*r*.2,-r*.25,r*.12,Math.PI,Math.PI*2);c.stroke()}c.restore()}
+  c.fillStyle='#f2c230';c.beginPath();c.arc(0,r*.08,r*.72,Math.PI,0);c.closePath();c.fill();
+  c.fillStyle='rgba(255,255,255,.35)';c.beginPath();c.ellipse(-r*.25,-r*.32,r*.22,r*.08,-.4,0,6.283);c.fill();
+  c.strokeStyle='#c9981a';c.lineWidth=r*.05;c.beginPath();c.moveTo(-r*.72,r*.08);c.lineTo(r*.72,r*.08);c.stroke();c.restore()}
 WACKY.presser={dur:7.2,draw(c,W,H,t,b,n){const U=H/100,r=U*10,px=W*.5,py=H*.5;
   c.fillStyle='#1d2a44';c.fillRect(0,0,W,H);for(let i=0;i<8;i++)rr(c,i*W/8,0,W/16,H,0,'rgba(255,255,255,.04)');
   rr(c,px-U*18,H*.12,U*36,U*14,U*2,'#e8b931');c.fillStyle='#1d2a44';c.font=`900 ${U*4.2}px Rubik,sans-serif`;c.textAlign='center';c.fillText('BINGO HALL',px,H*.12+U*6);c.font=`700 ${U*2.6}px Rubik,sans-serif`;c.fillText('PRESS BRIEFING',px,H*.12+U*10.5);
