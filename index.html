@@ -1393,6 +1393,7 @@ async function croon(n){
 }
 // sound cues for the gags that don't schedule their own
 const SFXMAP={
+  titanic:[[.3,'wind'],[1.2,'whoosh'],[4.5,'crash'],[4.8,'rumble'],[5.6,'rumble'],[6.2,'splash'],[6.5,'splash'],[7.4,'wind']],
   boat:[[.1,'splash'],[2.1,'splash']],car:[[.65,'horn'],[1.45,'thump'],[1.5,'boing']],ufo:[[1.2,'warble']],
   rocket:[[1.1,'click'],[1.46,'click'],[1.82,'click'],[2.2,'rumble']],dunk:[[1.95,'swish']],eagle:[[.55,'screech'],[1.5,'whoosh']],
   cannon:[[1,'fuse']],balloon:[[1.8,'whoosh'],[2.6,'whoosh']],magic:[[1.3,'click'],[1.65,'click'],[2,'click'],[2.2,'whoosh'],[2.25,'tada']],
@@ -1711,9 +1712,158 @@ Object.assign(WACKY,{
   }}
 });
 // how close the camera gets for each gag (default 1.7x); machine-sized scenes get less
-const WZOOM={nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
+const WZOOM={cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
+// ---- the epic: two balls on an ocean liner, three scenes, original sad song
+function linerPart(c,side,W,U,crackK){
+  const deck=-U*15,keel=U*8,jag=[[0,deck],[U*1.5*crackK,deck+U*5],[-U*1.5*crackK,deck+U*11],[U*1*crackK,deck+U*17],[0,keel]];
+  const pts=side<0?[[-W*.44,deck-U*2],...jag,[-W*.40,keel]]:[...jag.slice().reverse(),[W*.48,keel],[W*.5,deck]];
+  poly(c,pts,'#141414');
+  c.save();c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.clip();
+  c.fillStyle='#b3121f';c.fillRect(-W,U*3,W*2,U*6);c.fillStyle='#f2f2f2';c.fillRect(-W,deck,W*2,U*2.2);
+  for(let i=0;i<40;i++)circ(c,-W*.4+i*U*2.4,deck+U*5,U*.45,'#ffe9a8');c.restore();
+  if(side<0){rr(c,-W*.3,deck-U*7,W*.29,U*7,U*.5,'#f4f4f4');[-.14,-.06].forEach(fx=>{rr(c,W*fx-U*2.2,deck-U*19,U*4.4,U*12,U*.5,'#e8b931');rr(c,W*fx-U*2.2,deck-U*19,U*4.4,U*3,0,'#111')})}
+  else{rr(c,U*1,deck-U*7,W*.33,U*7,U*.5,'#f4f4f4');[.06,.14,.22].forEach(fx=>{rr(c,W*fx-U*2.2,deck-U*19,U*4.4,U*12,U*.5,'#e8b931');rr(c,W*fx-U*2.2,deck-U*19,U*4.4,U*3,0,'#111')});
+    for(let i=0;i<10;i++)ln(c,W*.38+i*U*1.2,deck,W*.38+i*U*1.2,deck-U*3,'#ccc',1.2);ln(c,W*.38,deck-U*3,W*.5,deck-U*3,'#ccc',1.2)}
+}
+function armsOut(c,x,y,r,t){const f=Math.sin(t*2)*.12;ln(c,x-r*.9,y,x-r*2.6,y-r*.5+f*r,'#f1c27d',r*.17);ln(c,x+r*.9,y,x+r*2.6,y-r*.5-f*r,'#f1c27d',r*.17)}
+function sadSong(st8){
+  const a=audio();if(!a)return;
+  const out=a.createGain();out.gain.value=.9;out.connect(a.destination);st8.songOut=out;
+  const b=.62,t0=a.currentTime+.1;
+  // an original slow ballad in D minor: a breathy whistle melody over soft held chords
+  const mel=[[69,1],[74,1],[72,.5],[70,.5],[69,1.5],[67,.5],[65,1],[67,.5],[69,.5],[70,2],[69,1],[67,.5],[65,.5],[64,1],[65,.5],[67,.5],[62,3]];
+  let at=0;mel.forEach(([m,d])=>{const t=t0+at*b,len=d*b;
+    const o=a.createOscillator(),v=a.createOscillator(),vg=a.createGain(),g=a.createGain();o.type='sine';o.frequency.value=mf(m+12);
+    v.frequency.value=5.2;vg.gain.value=6;v.connect(vg);vg.connect(o.frequency);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.09,t+.12);g.gain.setValueAtTime(.08,t+len*.8);g.gain.exponentialRampToValueAtTime(.0001,t+len+.15);
+    o.connect(g);g.connect(out);o.start(t);v.start(t);o.stop(t+len+.2);v.stop(t+len+.2);at+=d});
+  [[50,[62,65,69]],[46,[62,65,70]],[41,[60,65,69]],[48,[60,64,67]],[50,[62,65,69]]].forEach(([root,ch],i)=>{const t=t0+i*4*b;
+    [root].concat(ch).forEach(m=>{const o=a.createOscillator(),g=a.createGain();o.type=m===root?'triangle':'sine';o.frequency.value=mf(m);
+      g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(m===root?.05:.025,t+.8);g.gain.setValueAtTime(m===root?.05:.025,t+4*b-.3);g.gain.exponentialRampToValueAtTime(.0001,t+4*b+.6);
+      o.connect(g);g.connect(out);o.start(t);o.stop(t+4*b+.7)})});
+}
+WACKY.titanic={dur:15,end(){if(this.songOut){try{const a=audio();this.songOut.gain.setTargetAtTime(.0001,a.currentTime,.4);const o=this.songOut;setTimeout(()=>{try{o.disconnect()}catch(e){}},2500)}catch(e){}}},
+draw(c,W,H,t,b,n){const U=H/100,r=U*6.3,lvl=H*.72,px=W*.62,n2=(()=>{let m=(n+21)%75+1;return m===69?70:m})();
+  const black=a=>{if(a>0){c.fillStyle=`rgba(0,0,0,${Math.min(1,a)})`;c.fillRect(0,0,W,H)}};
+  if(t<3.8){ // SCENE 1: sunset at the bow
+    const g=c.createLinearGradient(0,0,0,lvl);g.addColorStop(0,'#3b1e5a');g.addColorStop(.6,'#ff7a45');g.addColorStop(1,'#ffc46b');c.fillStyle=g;c.fillRect(0,0,W,lvl);
+    circ(c,W*.12,lvl,U*12,'#ffe08a');
+    c.save();c.translate(px,lvl);linerPart(c,-1,W,U,0);linerPart(c,1,W,U,0);c.restore();
+    const deckY=lvl-U*15-r,x1=px-W*.38,x2=px-W*.33;
+    const p=intro(t,b,x1,deckY,r,.9);
+    if(t>.9){armsOut(c,x2,deckY,r,t);drawBall(c,x2,deckY,r,n2,0);armsOut(c,x1,deckY,r,t+1)}
+    drawBall(c,p.x,p.y,p.r,n,0);
+    for(let i=0;i<5;i++){const u=(t*.9+i*.2)%1;ln(c,x1+U*30-u*U*60,deckY-U*8+i*U*4,x1+U*22-u*U*60,deckY-U*8+i*U*4,`rgba(255,255,255,${.6*(1-u)})`,2)}
+    water(c,W,H+40,lvl,t*1.5);
+    if(t>1.2&&t<3.3)bubble(c,x1+U*14,deckY-U*16,"I'M THE BINGO KING!",U*3.6);
+    black(seg(t,3.3,3.8)*1.1);
+  }else if(t<7.3){ // SCENE 2: night, the ship splits
+    c.fillStyle='#05081a';c.fillRect(0,0,W,H);for(let i=0;i<45;i++)circ(c,(i*71%100)/100*W,(i*37%100)/100*lvl,U*.25,'#fff');
+    const k=easeIO(seg(t,4.7,5.9)),crack=seg(t,4.5,4.8);
+    const bowA=-.45*easeIn(seg(t,4.7,6.2)),bowY=H*.7*easeIn(seg(t,5,6.8)),stA=-1.15*k,stY=H*1.1*easeIn(seg(t,6.1,7.2)),sep=U*3*crack;
+    c.save();c.translate(px-sep,lvl+bowY);c.rotate(bowA);linerPart(c,-1,W,U,crack);c.restore();
+    c.save();c.translate(px+sep,lvl+stY);c.rotate(stA);linerPart(c,1,W,U,crack);c.restore();
+    const onStern=(dx)=>{const ca=Math.cos(stA),sa=Math.sin(stA),ly=-U*15-r;return [px+sep+dx*ca-ly*sa,lvl+stY+dx*sa+ly*ca]};
+    const fall=(dx,i)=>{const T=5.75+i*.12;if(t<T)return onStern(dx);const [x0,y0]=(()=>{const ca=Math.cos(-1.15*easeIO(seg(T,4.7,5.9))),sa=Math.sin(-1.15*easeIO(seg(T,4.7,5.9))),ly=-U*15-r;return [px+sep+dx*ca-ly*sa,lvl+dx*sa+ly*ca]})(),u=t-T;
+      return [x0+u*U*(18+i*10),Math.min(lvl+U*2,y0+u*u*H*1.1)]};
+    const [ax,ay]=fall(W*.3,0),[bx2,by2]=fall(W*.36,1);
+    drawBall(c,bx2,by2,r,n2,0);drawBall(c,ax,ay,r,n,0);
+    water(c,W,H+40,lvl,t*2);
+    if(t>4.5&&t<5.2){const u=seg(t,4.5,5.2);c.fillStyle=`rgba(255,240,200,${.5*(1-u)})`;c.fillRect(0,0,W,H)}
+    word(c,H,W*.5,H*.16,seg(t,4.5,5.5),'CRACK!');
+    if(t>5.3&&t<6.6){bubble(c,ax-U*6,ay-U*14,'AAAAH!',U*3.4);bubble(c,bx2+U*10,by2-U*20,'AAAAAAH!',U*3.4)}
+    black(seg(t,3.8,4.2)<1?1-seg(t,3.8,4.2):0);black(seg(t,6.8,7.3));
+  }else{ // SCENE 3: adrift on a door in the cold night
+    c.fillStyle='#030614';c.fillRect(0,0,W,H);for(let i=0;i<60;i++)circ(c,(i*71%100)/100*W,(i*37%100)/100*lvl,U*.22*(1+.5*Math.sin(t*2+i)),'#fff');circ(c,W*.8,H*.2,U*6,'#e8ecf4');
+    const gx=W*.45,bob=Math.sin(t*1.2)*U*.6-U*3;
+    for(let i=0;i<30;i++){const sx=((i*53)%100)/100*W+Math.sin(t+i)*U*2,sy=((t*U*6+i*37*U)%(H*1.1))-U*5;circ(c,sx,sy,U*.3,'rgba(255,255,255,.7)')}
+    const drift=easeIn(seg(t,10,14.6)),sink=easeIn(seg(t,12,14.4));
+    const x2=gx+U*20+drift*W*.38,y2=lvl-r*.35+bob+sink*U*16;
+    if(sink<.98)drawBall(c,x2,y2,r,n2,0);
+    if(t<10.2)ln(c,gx+U*13,lvl-U*1+bob,x2-r*.8,y2,'#f1c27d',r*.17);
+    rr(c,gx-U*14,lvl-U*2+bob,U*28,U*4,U*.6,'#8a5a2b');ln(c,gx-U*13,lvl+bob,gx+U*13,lvl+bob,'#6b4420',1.5);rr(c,gx-U*12,lvl-U*1.5+bob,U*10,U*3,U*.4,'rgba(0,0,0,.18)');rr(c,gx+U*2,lvl-U*1.5+bob,U*10,U*3,U*.4,'rgba(0,0,0,.18)');
+    drawBall(c,gx-U*4,lvl-U*2-r+bob,r,n,0);
+    if(t>9.2&&t<10.4)ln(c,gx-U*4+r*.8,lvl-U*2-r*.6+bob,gx+U*12,lvl-U*1.6+bob,'#f1c27d',r*.17);
+    water(c,W,H+40,lvl,t*.8);
+    for(let i=0;i<2;i++){const u=(t*.7+i*.5)%1;circ(c,gx-U*4+r*.9+u*U*4,lvl-U*2-r*1.2-u*U*5+bob,U*(1+u*1.5),`rgba(220,230,255,${.35*(1-u)})`)}
+    if(sink>.3)for(let i=0;i<4;i++){const u=((t-12)*1.2+i*.25)%1;circ(c,x2+(i-1.5)*U*1.5,lvl-u*U*4,U*.8*(1-u),`rgba(200,230,255,${1-u})`)}
+    if(t>7.9&&t<9.4)bubble(c,x2+U*4,y2-U*16,'B-B-BRRR...',U*3.2);
+    if(t>10.5&&t<12)bubble(c,x2+U*2,y2-U*16,'...BINGO...',U*3);
+    if(t>12.6&&t<14.6)bubble(c,gx-U*4,lvl-U*25,'...there was room on the door.',U*3);
+    black(1-seg(t,7.3,7.9));black(seg(t,14.4,15));
+    if(t>=7.3&&!this.sang){this.sang=1;sadSong(this)}
+  }
+}};
+// ---- hallway brawl: one long side-scrolling take, ball with a hammer vs a corridor of goons
+WACKY.hallway={dur:7.4,draw(c,W,H,t,b,n){const U=H/100,floor=H*.88,ceil=H*.12,r=U*5.2,N=8,xs=i=>W*(.24+i*.088),T=i=>1.1+i*.58;
+  c.fillStyle='#1f2a1c';c.fillRect(0,0,W,H);c.fillStyle='#34422c';c.fillRect(0,ceil,W,floor-ceil);c.fillStyle='#151a12';c.fillRect(0,floor,W,H-floor);c.fillStyle='#0f140c';c.fillRect(0,0,W,ceil);
+  for(let i=0;i<9;i++){const dx=W*(.04+i*.12);rr(c,dx,floor-U*34,U*9,U*34,U*.4,'#4a3a26');circ(c,dx+U*7.5,floor-U*17,U*.6,'#c9a64a');rr(c,dx+U*2,floor-U*30,U*5,U*1.2,0,'#2a2218')}
+  for(let i=0;i<7;i++){const on=Math.sin(t*37+i*3)>-.85;rr(c,W*(.06+i*.15),ceil,U*10,U*1.2,U*.3,on?'#eaffd8':'#555');if(on){const g=c.createRadialGradient(W*(.06+i*.15)+U*5,ceil,U,W*(.06+i*.15)+U*5,ceil,U*30);g.addColorStop(0,'rgba(220,255,200,.18)');g.addColorStop(1,'rgba(220,255,200,0)');c.fillStyle=g;c.fillRect(W*(.06+i*.15)-U*25,ceil,U*60,U*40)}}
+  ln(c,0,floor,W,floor,'#0b0e09',U*.6);
+  // where the ball is
+  let bx,seg0=-1,frac=0;
+  if(t<1.1)bx=lerp(W*.06,xs(0)-U*9,easeIO(seg(t,.5,1.1)));
+  else if(t<T(N-1)+.58){seg0=Math.min(N-1,Math.floor((t-1.1)/.58));frac=(t-T(seg0))/.58;bx=seg0<N-1?lerp(xs(seg0)-U*9,xs(seg0+1)-U*9,easeIO(seg(frac,.3,1))):xs(seg0)-U*9}
+  else bx=lerp(xs(N-1)-U*9,W*.93,easeIO(seg(t,T(N-1)+.58,6.6)));
+  const by=floor-r-(t>1.1&&t<6.6?Math.abs(Math.sin(t*12))*U*1.2:0);
+  // goons
+  for(let i=N-1;i>=0;i--){const ht=T(i),hit=t>=ht,k=hit?easeOut(seg(t,ht,ht+.38)):0,gx=xs(i)+k*U*7+(hit?0:Math.sin(t*6+i)*U*.8),s=U*21;
+    c.save();c.translate(gx,floor);c.rotate(k*1.45);figure(c,0,0,s,{shirt:i%3?'#2b2b2b':'#3a3326',pants:'#111',arm:hit?0:(Math.sin(t*8+i)>.2?1:.3),leg:hit?0:Math.sin(t*5+i)*.4});c.restore();
+    if(hit&&t<ht+1.1)for(let k2=0;k2<3;k2++){const a=t*7+k2*2.1;sparkle(c,gx+U*12+Math.cos(a)*U*4,floor-U*8+Math.sin(a)*U*1.5,U*1.3,'#ffe27a')}}
+  // the ball and its hammer
+  const p=t<.5?intro(t,b,W*.06,by,r,.5):null;
+  drawBall(c,p?p.x:bx,p?p.y:by,p?p.r:r,n,0);
+  const sw=seg0>=0&&frac<.3?Math.sin(seg(frac,0,.3)*Math.PI):0,ha=-2.1+sw*2.3+(t>6.6?-.4:0);
+  const hx=(p?p.x:bx)+r*.8,hy=(p?p.y:by)-r*.1;
+  ln(c,(p?p.x:bx)+r*.6,(p?p.y:by),hx,hy,'#f1c27d',r*.2);
+  c.save();c.translate(hx,hy);c.rotate(ha);rr(c,-U*.5,-U*12,U*1,U*12,U*.4,'#8b5a2b');rr(c,-U*2.6,-U*14,U*5.2,U*2.6,U*.5,'#9aa3ad');c.restore();
+  const words=['BONK!','WHACK!','THWACK!','POW!','BONK!','KLONK!','WHAM!','BOINK!'];
+  for(let i=0;i<N;i++)word(c,H,xs(i)+U*8,H*.3+(i%2)*U*6,seg(t,T(i),T(i)+.55),words[i],i%2?'#ffd23f':'#9fffb0');
+  c.fillStyle='rgba(40,70,20,.12)';c.fillRect(0,0,W,H);
+  word(c,H,W*.5,H*.2,seg(t,6.4,7.4),'ONE TAKE!','#ffd23f');
+  for(let i=0;i<N;i++)if(t>=T(i)&&!this['h'+i]){this['h'+i]=1;sfx('thump');setTimeout(()=>sfx('pop'),40)}
+}};
+// ---- cellar game: two chained balls, a hacksaw, and a key nobody noticed
+WACKY.cellar={dur:8,draw(c,W,H,t,b,n){const U=H/100,floor=H*.86,r=U*7.5,n2=(()=>{let m=(n+33)%75+1;return m===69?70:m})();
+  const fl=Math.sin(t*31)>-.7&&!(t>3&&t<3.15)?1:.45;
+  c.fillStyle='#1b1d18';c.fillRect(0,0,W,H);
+  for(let y=0;y<floor;y+=U*6)for(let x=(y/U/6)%2?U*3:0;x<W;x+=U*6)rr(c,x+1,y+1,U*6-2,U*6-2,U*.4,'#3a3d33');
+  for(let i=0;i<14;i++)ell(c,(i*67%100)/100*W,(i*41%100)/100*floor,U*(2+i%3),U*(1+i%2),'rgba(70,55,25,.35)');
+  c.fillStyle='#24221c';c.fillRect(0,floor,W,H);ln(c,0,H*.18,W,H*.18,'#6b5a3a',U*1.6);ln(c,W*.5,H*.18,W*.5,floor,'#6b5a3a',U*1.6);
+  // light bulb
+  ln(c,W*.5,0,W*.5,H*.08,'#111',2);circ(c,W*.5,H*.1,U*2,fl>.9?'#fff6c8':'#776f50');
+  const g=c.createRadialGradient(W*.5,H*.1,U,W*.5,H*.5,W*.55);g.addColorStop(0,`rgba(255,240,180,${.18*fl})`);g.addColorStop(1,`rgba(0,0,0,${.55-.2*fl})`);c.fillStyle=g;c.fillRect(0,0,W,H);
+  // tape recorder
+  rr(c,W*.42,floor-U*7,U*14,U*7,U*1,'#2b2b2b');circ(c,W*.42+U*4,floor-U*3.5,U*1.8,'#888');circ(c,W*.42+U*10,floor-U*3.5,U*1.8,'#888');rr(c,W*.42+U*2,floor-U*6.4,U*10,U*1,0,'#d1122f');
+  if(t>.8&&t<2.3)bubble(c,W*.42+U*7,floor-U*16,'Time to play... BINGO.',U*3.2);
+  const ax=W*.3,bx2=W*.7,ay=floor-r;
+  // chains to the pipe
+  const chain=(x,y,px)=>{for(let k=0;k<=10;k++){const u=k/10;ell(c,lerp(x,px,u),lerp(y,floor-U*1,u)+Math.sin(u*Math.PI)*U*3,U*1,U*.6,'#8a8a8a')}};
+  // the other ball saws
+  const cut=t>4.3,cy=ay+r*.3,hop=seg(t,4.4,6),topX=bx2+hop*W*.35,topY=ay-Math.abs(Math.sin(hop*Math.PI*3))*U*12*(1-hop*.5);
+  chain(bx2,ay+r*.8,W*.5);
+  if(!cut){drawBall(c,bx2+(t>2.4?Math.sin(t*40)*U*.4:0),ay,r,n2,0)}
+  else{c.save();c.beginPath();c.rect(bx2-r*2,cy,r*4,r*3);c.clip();drawBall(c,bx2,ay,r,n2,0);c.restore();ell(c,bx2,cy,r*.94,r*.2,'#d9d9d9');
+    if(hop<1){c.save();c.translate(topX,topY);c.beginPath();c.rect(-r*2,-r*2.5,r*4,r*2.5+r*.3);c.clip();drawBall(c,0,0,r,n2,0);c.restore();ell(c,topX,topY+r*.3,r*.94,r*.18,'#d9d9d9')}}
+  if(t>1.6&&t<4.4){const k=easeOut(seg(t,1.6,2.1)),sx=bx2+Math.sin(t*22)*U*4*(t>2.4?1:0),sy=lerp(floor-H*.6,cy,k);
+    rr(c,sx-U*11,sy-U*.6,U*16,U*1.2,0,'#c9d0d6');for(let i=0;i<12;i++)poly(c,[[sx-U*11+i*U*1.3,sy+U*.6],[sx-U*10.4+i*U*1.3,sy+U*1.3],[sx-U*9.8+i*U*1.3,sy+U*.6]],'#9aa3ad');
+    ln(c,sx+U*5,sy,sx+U*8,sy-U*5,'#555',U*.7);rr(c,sx+U*6.5,sy-U*8,U*3,U*5,U*1,'#d1122f');
+    if(t>2.4)for(let i=0;i<6;i++){const u=((t*3+i*.17)%1);circ(c,bx2+(Math.random()-.5)*U*4,cy+u*U*10,U*.5,'rgba(235,235,235,.9)')}}
+  if(t>2.6&&t<4.2)for(let i=0;i<2;i++)ell(c,bx2+(i?r:-r)*.85,ay-r*.7+((t*2+i*.5)%1)*U*4,U*.7,U*1.1,'#9fe3ff');
+  if(t>4.5&&t<5.9)bubble(c,topX,topY-U*14,'FREE!!',U*3.4);
+  // the called ball, and the key on the floor
+  const kx=ax+U*12,ky=floor-U*1.5,took=t>6.4;
+  if(!took){c.save();c.translate(kx,ky);rr(c,0,-U*.5,U*5,U*1,U*.3,'#e8b931');circ(c,-U*1,0,U*1.4,'#e8b931');circ(c,-U*1,0,U*.6,'#24221c');rr(c,U*3.5,0,U*.8,U*1.2,0,'#e8b931');c.restore();if(t>5.6)sparkle(c,kx+U*2,ky-U*2,U*(1.2+.5*Math.sin(t*9)),'#fff6c8')}
+  const out=easeIn(seg(t,6.6,7.9)),p=intro(t,b,ax,ay,r,.7);
+  if(!(t>6.4))chain(ax,ay+r*.8,W*.5);
+  drawBall(c,t<.7?p.x:ax+out*W*.9,t<.7?p.y:ay,t<.7?p.r:r,n,0);
+  if(t>5.6&&t<6.6)bubble(c,ax+U*4,ay-U*16,'...the key was right there.',U*3);
+  if(t>3.2&&t<4.2)bubble(c,ax,ay-U*16,'Uh... buddy?',U*3);
+  word(c,H,W*.75,H*.25,seg(t,4.3,5.2),'SNAP!','#ffd23f');
+  cues(this,t,[[.8,'click'],[2.4,'rasp'],[3.3,'rasp'],[4.3,'thump'],[4.6,'boing'],[6.4,'ding']]);
+}};
 // ---- developer previews
-const GAGNAME={nice:'69 Nice!',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
+const GAGNAME={nice:'69 Nice!',titanic:'Ocean liner epic',hallway:'Hallway brawl',cellar:'Cellar game',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
   slots:'Slot machine',roulette:'Roulette',blackjack:'Blackjack',dice:'Dice',fountain:'Fountain show',chapel:'Wedding chapel',saw:'Saw in half',fans:'Feather fans',flush:'Royal flush',limo:'Limo',neon:'Neon sign',lounge:'Lounge singer',wrecking:'Wrecking ball',ninja:'Ninja',pinball:'Pinball',dogfetch:'Dog fetch',
   boulder:'Boulder',ape:'Giant ape',slowmo:'Slow-mo',liner:'Ocean liner',trex:'T-rex',moonbike:'Moon bike',sabers:'Laser swords',bridge:"Wizard's bridge",heist:'Heist',timejump:'Time jump',uphouse:'Balloon house',sharkstorm:'Shark storm'};
 let devBusy=false;
@@ -1747,7 +1897,7 @@ function wackyPlay(n,keyName){
     let camX=b.x,camY=b.y,lastT=0;WTRACK={n,x:b.x,y:b.y,got:0};
     const frame=now=>{
       const t=(now-t0)/1000,dt=Math.min(.05,t-lastT);lastT=t;
-      if(pending!==n||!projOpen||t>sc.dur){ctx.clearRect(0,0,W,H);cv.style.display='none';WTRACK=null;CAM=null;res();return}
+      if(pending!==n||!projOpen||t>sc.dur){ctx.clearRect(0,0,W,H);cv.style.display='none';WTRACK=null;CAM=null;if(sc.end)try{sc.end.call(S)}catch(e){}res();return}
       // camera: ease in to a close-up and smoothly follow the ball, never showing past the edges
       const z=1+(Z-1)*easeIO(seg(t,0,.8)),k=Math.min(1,dt*4.5);
       camX+=(WTRACK.x-camX)*k;camY+=(WTRACK.y-camY)*k;
