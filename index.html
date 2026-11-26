@@ -173,6 +173,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 .flybg{position:absolute;inset:0;background:rgba(3,20,15,.6);opacity:0;pointer-events:none;transition:opacity .45s}
 .flybg.on{opacity:1}
 .fly{position:absolute;left:50%;top:50%;display:none;pointer-events:none;z-index:3}
+.wacky{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:4}
 .fly .bb{--s:min(62cqh,44cqw)}
 .pctrl{display:flex;flex-wrap:wrap;gap:1cqh .8cqw;align-items:stretch}
 .pctrl #pNext{flex:1 1 100%}
@@ -336,6 +337,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
       <div class="panel" id="autoPanel">
         <button class="stoggle" id="stoggle" aria-expanded="false" aria-controls="sbody"><svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.3 2h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8c.1.6.1 1.2 0 1.8l2 1.8-1.7 2.9-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6c-.6-.2-1.2-.5-1.7-.9l-2.5.9-1.7-2.9 2-1.8a5.6 5.6 0 0 1 0-1.8l-2-1.8 1.7-2.9 2.5.9c.5-.4 1.1-.7 1.7-.9zM12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z" transform="translate(0 1.5)"/></svg><span>Settings</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="sbody" id="sbody"><div class="sinner" id="sinner">
+        <div class="field"><span>Wacky animations</span><div class="chips" id="wackySw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div></div>
         <div class="field"><span>Announcer voice</span><div class="chips" id="voiceSw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div></div>
         <div class="field"><span>Projector screen shape</span><div class="chips" id="ratios"><button class="chip" data-r="16:9">16:9 TV</button><button class="chip" data-r="16:10">16:10</button><button class="chip" data-r="4:3">4:3</button><button class="chip" data-r="fill">Fill screen</button></div></div>
         <div class="field"><span>Theme</span><div class="chips" id="skins"><button class="chip" data-k="classic">Classic green</button><button class="chip" data-k="vegas">Darlene's Vegas</button></div></div>
@@ -393,6 +395,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
   </aside>
   <div class="flybg" id="flybg"></div>
   <div class="fly" id="fly"></div>
+  <canvas class="wacky" id="wacky" aria-hidden="true"></canvas>
   <button class="pexit" id="pExit" aria-label="Exit projector view" title="Exit projector view"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button>
   <div class="prot" id="prot"><p>Turn your phone sideways so the board fills the projector.</p><button class="pbtn" id="protOk">Got it</button></div>
 </div>
@@ -440,7 +443,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={voiceOff:false,ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
+let st={wacky:true,voiceOff:false,ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 if(!st.cdSound)st.cdSound=st.tick===false?'off':'tick';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
@@ -832,6 +835,8 @@ function applyRatio(){
   document.querySelectorAll('#ratios .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===st.ratio));
 }
 $('ratios').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.ratio=b.dataset.r;save();applyRatio()});
+function applyWackySw(){document.querySelectorAll('#wackySw .chip').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='on')===!!st.wacky))}
+$('wackySw').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.wacky=b.dataset.v==='on';save();applyWackySw()});
 function applyVoiceSw(){
   document.querySelectorAll('#voiceSw .chip').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='off')===!!st.voiceOff));
   $('voice').disabled=!!st.voiceOff;
@@ -844,7 +849,7 @@ function applySkin(){
   document.querySelectorAll('#skins .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===st.skin));
 }
 $('skins').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.skin=b.dataset.k;save();applySkin()});
-applySkin();applyRatio();applyVoiceSw();
+applySkin();applyRatio();applyVoiceSw();applyWackySw();
 function setOpen(o){st.setOpen=o;save();$('autoPanel').classList.toggle('open',o);$('stoggle').setAttribute('aria-expanded',o);$('sinner').inert=!o}
 $('stoggle').addEventListener('click',()=>setOpen(!st.setOpen));
 setOpen(!!st.setOpen);
@@ -886,14 +891,130 @@ function projShow(n){
   else fly.style.transform='translate(-50%,-50%)';
   return Date.now();
 }
+// ================= Wacky animations: rare comic gags as the ball heads to the board =================
+const easeOut=t=>1-(1-t)**3,easeIn=t=>t*t*t,easeIO=t=>t<.5?4*t*t*t:1-((-2*t+2)**3)/2,clamp01=t=>Math.max(0,Math.min(1,t));
+const seg=(t,a,b)=>clamp01((t-a)/(b-a));
+function wackyCanvas(){
+  const cv=$('wacky'),p=$('proj'),dpr=Math.min(2,devicePixelRatio||1),W=p.clientWidth,H=p.clientHeight;
+  cv.width=W*dpr;cv.height=H*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);cv.style.display='block';
+  return {cv,ctx,W,H};
+}
+function cssv(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function drawBall(ctx,x,y,r,n,rot){
+  const l=letter(n),c=cssv('--'+l)||'#888';
+  ctx.save();ctx.translate(x,y);ctx.rotate(rot||0);
+  ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.arc(r*.06,r*.1,r,0,6.28);ctx.fill();
+  ctx.fillStyle=c;ctx.beginPath();ctx.arc(0,0,r,0,6.28);ctx.fill();
+  const g=ctx.createRadialGradient(-r*.35,-r*.4,r*.05,-r*.2,-r*.25,r*.9);g.addColorStop(0,'rgba(255,255,255,.75)');g.addColorStop(.35,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(0,0,0,.25)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,r,0,6.28);ctx.fill();
+  if(isVegas()){ctx.strokeStyle='#e8b931';ctx.lineWidth=Math.max(2,r*.06);ctx.stroke()}
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,r*.62,0,6.28);ctx.fill();
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle=cssv('--'+l+'l')||c;ctx.font=`800 ${r*.26}px Rubik,sans-serif`;ctx.fillText(l,0,-r*.26);
+  ctx.fillStyle='#111';ctx.font=`800 ${r*.46}px Rubik,sans-serif`;ctx.fillText(String(n),0,r*.14);
+  ctx.restore();
+}
+function comicWord(ctx,x,y,s,text,col){
+  ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.rotate(-.12);
+  ctx.fillStyle=col||'#ffd23f';ctx.beginPath();
+  for(let i=0;i<24;i++){const a=i*Math.PI/12,rr=i%2?60:95;ctx.lineTo(Math.cos(a)*rr*1.5,Math.sin(a)*rr)}
+  ctx.closePath();ctx.fill();ctx.lineWidth=5;ctx.strokeStyle='#000';ctx.stroke();
+  ctx.font='900 64px Rubik,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.lineWidth=10;ctx.strokeStyle='#000';ctx.strokeText(text,0,4);ctx.fillStyle='#e0302a';ctx.fillText(text,0,4);
+  ctx.restore();
+}
+function water(ctx,W,H,level,ph){
+  const g=ctx.createLinearGradient(0,level,0,H);g.addColorStop(0,'#3ba7ff');g.addColorStop(1,'#0b3d91');
+  ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(0,H);
+  for(let x=0;x<=W+20;x+=20)ctx.lineTo(x,level+Math.sin(x/60+ph)*H*.012+Math.sin(x/23-ph*1.7)*H*.005);
+  ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=3;ctx.beginPath();
+  for(let x=0;x<=W+20;x+=20){const y=level+Math.sin(x/60+ph)*H*.012+Math.sin(x/23-ph*1.7)*H*.005;x?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+  ctx.stroke();
+}
+function boat(ctx,x,y,s,tilt){
+  ctx.save();ctx.translate(x,y);ctx.rotate(tilt);
+  ctx.fillStyle='#8d4b22';ctx.beginPath();ctx.moveTo(-s,-s*.28);ctx.lineTo(s,-s*.28);ctx.lineTo(s*.72,s*.22);ctx.lineTo(-s*.72,s*.22);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#c46a2f';ctx.fillRect(-s,-s*.34,s*2,s*.1);
+  ctx.fillStyle='#fff';ctx.fillRect(-s*.8,-s*.12,s*1.6,s*.06);
+  ctx.strokeStyle='#5b3216';ctx.lineWidth=s*.05;ctx.beginPath();ctx.moveTo(s*.35,-s*.3);ctx.lineTo(s*.35,-s*1.75);ctx.stroke();
+  ctx.fillStyle='#fffdf5';ctx.beginPath();ctx.moveTo(s*.4,-s*1.7);ctx.quadraticCurveTo(s*1.25,-s*1,s*.4,-s*.42);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#e0302a';ctx.beginPath();ctx.moveTo(s*.3,-s*1.6);ctx.quadraticCurveTo(-s*.55,-s*1.05,s*.3,-s*.5);ctx.closePath();ctx.fill();
+  ctx.fillStyle=cssv('--gold')||'#ffd23f';ctx.beginPath();ctx.moveTo(s*.35,-s*1.75);ctx.lineTo(s*.75,-s*1.66);ctx.lineTo(s*.35,-s*1.57);ctx.fill();
+  ctx.restore();
+}
+function car(ctx,x,y,s,wheelRot){
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle='#e0302a';ctx.beginPath();ctx.roundRect(-s,-s*.55,s*2,s*.5,s*.14);ctx.fill();
+  ctx.beginPath();ctx.moveTo(-s*.55,-s*.55);ctx.lineTo(-s*.32,-s*.95);ctx.lineTo(s*.42,-s*.95);ctx.lineTo(s*.72,-s*.55);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#bfe6ff';ctx.beginPath();ctx.moveTo(-s*.45,-s*.58);ctx.lineTo(-s*.28,-s*.88);ctx.lineTo(s*.02,-s*.88);ctx.lineTo(s*.02,-s*.58);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(s*.1,-s*.58);ctx.lineTo(s*.1,-s*.88);ctx.lineTo(s*.38,-s*.88);ctx.lineTo(s*.6,-s*.58);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#ffe27a';ctx.beginPath();ctx.arc(s*.94,-s*.4,s*.07,0,6.28);ctx.fill();
+  ctx.fillStyle='#fff';ctx.fillRect(-s*.9,-s*.36,s*1.7,s*.04);
+  [-s*.55,s*.55].forEach(wx=>{ctx.save();ctx.translate(wx,-s*.05);ctx.rotate(wheelRot);ctx.fillStyle='#111';ctx.beginPath();ctx.arc(0,0,s*.24,0,6.28);ctx.fill();
+    ctx.fillStyle='#bbb';ctx.beginPath();ctx.arc(0,0,s*.11,0,6.28);ctx.fill();ctx.strokeStyle='#666';ctx.lineWidth=s*.03;ctx.beginPath();ctx.moveTo(-s*.11,0);ctx.lineTo(s*.11,0);ctx.moveTo(0,-s*.11);ctx.lineTo(0,s*.11);ctx.stroke();ctx.restore()});
+  ctx.restore();
+}
+const WACKY={
+  boat:{dur:4.2,draw(ctx,W,H,t,b,n,st){
+    const lvl=H*.74+(H*.3)*(1-easeOut(seg(t,0,.7)))+(H*.3)*easeIn(seg(t,3.6,4.2)),ph=t*3;
+    const r2=b.r*.42,r=b.r+(r2-b.r)*easeIO(seg(t,0,.7));
+    const s=r2*2.1,bob=Math.sin(t*4)*H*.008;
+    const boatX=t<1.6?-s*1.4+(b.x+s*1.4)*easeOut(seg(t,.4,1.5)):b.x+(W+s*2.2-b.x)*easeIn(seg(t,2.3,3.9));
+    const deckY=lvl-s*.36+bob,tilt=Math.sin(t*3)*.05+(t>2.3?-.06:0);
+    // ball: shrink in place, hop into the boat, ride away
+    let x=b.x,y=b.y,rot=0;
+    if(t>=1.5){const j=seg(t,1.5,2.1),ty=deckY-r2*.95;x=b.x+(boatX-b.x)*j;y=b.y+(ty-b.y)*j-Math.sin(j*Math.PI)*H*.18;rot=j*6.28;
+      if(t>=2.1){x=boatX;y=ty+bob*0;rot=Math.sin(t*3)*.05}}
+    water(ctx,W,H+40,lvl+H*.06,ph+1.3);
+    boat(ctx,boatX,deckY+s*.28,s,tilt);
+    drawBall(ctx,x,y,r,n,rot);
+    if(t>2.1&&t<2.6){const p=seg(t,2.1,2.6);ctx.fillStyle='rgba(200,235,255,'+(1-p)+')';for(let i=0;i<10;i++){const a=Math.PI+i*Math.PI/9;ctx.beginPath();ctx.arc(boatX+Math.cos(a)*s*1.1*p,deckY+Math.sin(a)*s*.9*p,r2*.14,0,6.28);ctx.fill()}}
+    water(ctx,W,H+40,lvl,ph);
+  }},
+  car:{dur:3.1,draw(ctx,W,H,t,b,n,st){
+    const road=H*.84,r2=b.r*.38,s=r2*2.4;
+    const roadIn=easeOut(seg(t,0,.5))*(1-easeIn(seg(t,2.6,3.1)));
+    ctx.fillStyle='#2b2b2b';ctx.fillRect(0,road+(1-roadIn)*H*.3,W,H*.2);
+    ctx.fillStyle='#ffd23f';for(let x=-((t*600)%120);x<W;x+=120)ctx.fillRect(x,road+H*.08+(1-roadIn)*H*.3,60,H*.012);
+    const hitT=1.45,carX=t<hitT?-s*1.3+(b.x-r2-s*.95+s*1.3)*easeIn(seg(t,.55,hitT)):b.x-r2-s*.95+(t-hitT)*W*1.3;
+    // ball: shrink and drop onto the road, then get launched
+    let x=b.x,y,r=b.r+(r2-b.r)*easeIO(seg(t,0,.6)),rot=0;
+    const restY=road-r2;
+    if(t<hitT){const d=seg(t,0,.6),bounce=t>.6?Math.abs(Math.sin((t-.6)*9))*H*.04*Math.max(0,1-(t-.6)*2):0;y=b.y+(restY-b.y)*easeIn(d)-bounce}
+    else{const u=t-hitT;x=b.x+W*1.1*u;y=restY-H*1.5*u+H*1.4*u*u;rot=u*14}
+    if(t>.5&&t<hitT+.2){ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=4;for(let i=0;i<4;i++){const yy=road-s*(.25+i*.18);ctx.beginPath();ctx.moveTo(carX-s*1.1-i*20,yy);ctx.lineTo(carX-s*2-i*35,yy);ctx.stroke()}}
+    car(ctx,carX,road,s,t*20);
+    if(t>hitT){for(let i=0;i<5;i++){const u=seg(t,hitT,hitT+.9);ctx.fillStyle='rgba(200,200,200,'+(0.6*(1-u))+')';ctx.beginPath();ctx.arc(b.x-r2-i*s*.25,road-s*.15-u*s*.4*(i%2+1),s*.12*(1+u*1.5),0,6.28);ctx.fill()}}
+    drawBall(ctx,x,y,r,n,rot);
+    if(t>hitT&&t<hitT+.9){const u=seg(t,hitT,hitT+.9);comicWord(ctx,b.x+s*.3,road-s*1.3,Math.min(1,u*5)*(1+.08*Math.sin(u*20))*Math.min(.62,Math.max(.32,s/200)),'BONK!')}
+  }}
+};
+function wackyPlay(n,keyName){
+  return new Promise(res=>{
+    const key=keyName||(WACKY[window.__forceWacky]?window.__forceWacky:pick(Object.keys(WACKY))),sc=WACKY[key],{cv,ctx,W,H}=wackyCanvas();
+    const fr=$('fly').firstElementChild.getBoundingClientRect(),pr=$('proj').getBoundingClientRect();
+    const b={x:fr.left-pr.left+fr.width/2,y:fr.top-pr.top+fr.height/2,r:fr.width/2};
+    $('fly').style.display='none';
+    const t0=performance.now();
+    const frame=now=>{
+      const t=(now-t0)/1000;
+      if(pending!==n||!projOpen||t>sc.dur){ctx.clearRect(0,0,W,H);cv.style.display='none';res();return}
+      ctx.clearRect(0,0,W,H);sc.draw(ctx,W,H,t,b,n);requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+}
+const wackyRoll=()=>st.wacky&&!reduce&&(!!window.__forceWacky||Math.random()<0.2);
 async function projLand(n,since){
   const hold=2600-(Date.now()-since);if(hold>0)await wait(hold);
   if(pending!==n)return;
   const fly=$('fly'),cell=$('p'+n);
   $('flybg').classList.remove('on');
   if(projOpen&&!reduce){
-    const a=fly.animate(exitFrames('translate(-50%,-50%) '),{duration:800,easing:'cubic-bezier(.45,0,.8,.6)',fill:'forwards'});
-    try{await a.finished}catch(e){}
+    if(wackyRoll())await wackyPlay(n);
+    else{const a=fly.animate(exitFrames('translate(-50%,-50%) '),{duration:800,easing:'cubic-bezier(.45,0,.8,.6)',fill:'forwards'});
+      try{await a.finished}catch(e){}}
   }
   if(pending!==n)return;
   fly.style.display='none';pending=0;projRender();
