@@ -266,6 +266,8 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 .nice69{position:fixed;left:50%;top:40%;z-index:29;pointer-events:none;font:900 clamp(64px,22vw,180px)/1 Rubik,sans-serif;color:var(--gold);-webkit-text-stroke:6px #000;paint-order:stroke fill;text-shadow:0 8px 0 rgba(0,0,0,.4);transform:translate(-50%,-50%) scale(0);opacity:0}
 .nice69.go{animation:nicePop 2.2s cubic-bezier(.34,1.56,.64,1) forwards}
 @keyframes nicePop{0%{transform:translate(-50%,-50%) scale(0) rotate(-20deg);opacity:1}20%{transform:translate(-50%,-50%) scale(1.15) rotate(-6deg);opacity:1}30%{transform:translate(-50%,-50%) scale(1) rotate(-8deg)}80%{transform:translate(-50%,-50%) scale(1.05) rotate(-8deg);opacity:1}100%{transform:translate(-50%,-50%) scale(.6) rotate(-8deg);opacity:0}}
+.ver{position:fixed;left:max(8px,env(safe-area-inset-left));bottom:max(6px,env(safe-area-inset-bottom));z-index:22;border:0;background:none;padding:2px 4px;font:600 11px/1.2 Rubik,sans-serif;color:var(--soft);opacity:.45;cursor:default}
+.ver.upd{opacity:1;color:var(--btnink);background:var(--gold);border-radius:8px;padding:4px 8px;cursor:pointer}
 .confetti{position:fixed;inset:0;width:100%;height:100%;z-index:30;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.bgword b,.bingo.won .bgword b{animation:none}}
 .prot{position:absolute;inset:0;z-index:6;display:none;place-content:center;justify-items:center;gap:10px;text-align:center;padding:12px;background:rgba(3,20,15,.95);font-size:16px}
@@ -442,6 +444,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
   </div>
 </div>
 <div class="nice69" id="nice69" aria-hidden="true">NICE!</div>
+<button class="ver" id="ver" type="button"></button>
 <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
 <div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dt">
   <div class="box">
@@ -2559,6 +2562,12 @@ function tumbLoop(now){
   requestAnimationFrame(tumbLoop);
 }
 requestAnimationFrame(tumbLoop);
+// ---- version label, and a quiet check for a newer published version
+const APP_VERSION='v1.44';
+$('ver').textContent=APP_VERSION;
+async function checkVersion(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();
+  if(j&&j.v&&j.v!==APP_VERSION){const b=$('ver');b.classList.add('upd');b.textContent='Update available ('+String(j.v).slice(0,12)+') — tap to refresh';b.onclick=()=>location.reload()}}catch(e){}}
+setTimeout(checkVersion,3000);setInterval(checkVersion,5*60*1000);
 const dlg=$('dlg');
 const nextPat=()=>PATS[(PATS.indexOf(st.pat)+1)%PATS.length];
 $('reset').addEventListener('click',()=>{
