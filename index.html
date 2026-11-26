@@ -1712,7 +1712,7 @@ Object.assign(WACKY,{
   }}
 });
 // how close the camera gets for each gag (default 1.7x); machine-sized scenes get less
-const WZOOM={shower:1.15,cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
+const WZOOM={closet:1,shower:1.15,cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
 // ---- the epic: two balls on an ocean liner, three scenes, original sad song
 function linerPart(c,side,W,U,crackK){
   const deck=-U*15,keel=U*8,jag=[[0,deck],[U*1.5*crackK,deck+U*5],[-U*1.5*crackK,deck+U*11],[U*1*crackK,deck+U*17],[0,keel]];
@@ -1901,8 +1901,72 @@ WACKY.shower={dur:7.8,draw(c,W,H,t,b,n){const U=H/100,floor=H*.92,r=U*9,gx=W*.5,
   if(t>5.7&&t<6.9)bubble(c,gx-U*8,gy-r-U*12,"...I'm fine. Just inky.",U*3.2);
   cues(this,t,[[.3,'shower'],[3.3,'whoosh'],[3.6,'squish'],[3.82,'squish'],[4.04,'squish'],[4.26,'squish'],[4.48,'squish'],[5.2,'shower']]);
 }};
+// ---- closet TV: found-footage alien sighting at a birthday party (original parody)
+SFX4.static=(a,t)=>{sfxNoise(a,t,1.4,'highpass',2000,3000,.15)};
+function partyKid(c,x,y,r,num,pointA,t){drawBall(c,x,y,r,num,0);poly(c,[[x-r*.5,y-r*.85],[x+r*.5,y-r*.85],[x,y-r*2]],['#ff4d5e','#2f7fe0','#ffd23f'][num%3]);circ(c,x,y-r*2,r*.18,'#fff');
+  if(pointA!=null){ln(c,x+r*.7,y-r*.2,x+r*.7+Math.cos(pointA)*r*1.4,y-r*.2+Math.sin(pointA)*r*1.4+Math.sin(t*20)*r*.1,'#f1c27d',r*.22)}}
+function alien(c,x,y,s,t){const st=Math.sin(t*7);c.save();c.translate(x,y);c.fillStyle='#1c2420';
+  ln(c,0,-s*.5,-s*.18+st*s*.12,0,'#1c2420',s*.07);ln(c,0,-s*.5,s*.18-st*s*.12,0,'#1c2420',s*.07);
+  ell(c,0,-s*.75,s*.11,s*.3,'#1c2420');ln(c,0,-s*.95,-s*.3,-s*.45+st*s*.05,'#1c2420',s*.05);ln(c,0,-s*.95,s*.32,-s*.5-st*s*.05,'#1c2420',s*.05);
+  ell(c,s*.02,-s*1.13,s*.1,s*.13,'#1c2420');c.restore()}
+WACKY.closet={dur:11.6,draw(c,W,H,t,b,n){const U=H/100,r=U*9;
+  // the closet: coats, a chair, a little TV
+  c.fillStyle='#2a1f17';c.fillRect(0,0,W,H);ln(c,0,H*.08,W,H*.08,'#8a7a62',U*1.2);
+  for(let i=0;i<9;i++){const cx=W*(.03+i*.115),col=['#5b3b2b','#2f3b52','#6b2c2c','#3c4a2f','#4b3a5c'][i%5];ln(c,cx,H*.08,cx,H*.14,'#999',2);poly(c,[[cx-U*7,H*.15],[cx+U*7,H*.15],[cx+U*9,H*.78],[cx-U*9,H*.78]],col);ln(c,cx,H*.15,cx,H*.78,'rgba(0,0,0,.3)',2)}
+  c.fillStyle='rgba(0,0,0,.45)';c.fillRect(0,0,W,H);
+  const tx=W*.2,ty=H*.14,tw=W*.5,th=H*.5;
+  rr(c,tx-U*3,ty-U*3,tw+U*6,th+U*6,U*3,'#3a3a3a');rr(c,tx+tw*.42,ty+th+U*3,tw*.16,U*10,0,'#2a2a2a');rr(c,tx-U*6,ty+th+U*12,tw+U*12,U*3,U*1,'#4a3424');
+  const g=c.createRadialGradient(tx+tw/2,ty+th/2,U*5,tx+tw/2,ty+th/2,W*.6);g.addColorStop(0,'rgba(140,190,255,.18)');g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(0,0,W,H);
+  // --- what's on the TV
+  c.save();c.beginPath();c.roundRect(tx,ty,tw,th,U*2);c.clip();
+  const shake=t>2.6&&t<9.8?[Math.sin(t*9)*U*.8+Math.sin(t*23)*U*.4,Math.cos(t*7)*U*.6]:[0,0];
+  if(t<2.6){ // news desk
+    c.fillStyle='#14305e';c.fillRect(tx,ty,tw,th);for(let i=0;i<6;i++)circ(c,tx+tw*(.1+i*.17),ty+th*.3,U*3,'rgba(255,255,255,.06)');
+    rr(c,tx+tw*.28,ty+th*.62,tw*.44,th*.38,0,'#0b1a33');circ(c,tx+tw*.5,ty+th*.35,th*.12,'#e0b48c');rr(c,tx+tw*.38,ty+th*.47,tw*.24,th*.2,U*2,'#222');rr(c,tx+tw*.47,ty+th*.47,tw*.06,th*.12,0,'#c8102e');
+    rr(c,tx,ty+th*.72,tw,th*.12,0,'#c8102e');c.fillStyle='#fff';c.font=`900 ${th*.07}px Rubik,sans-serif`;c.textAlign='left';c.fillText('BREAKING: STRANGE PARTY FOOTAGE',tx+U*2,ty+th*.8);
+    rr(c,tx,ty+th*.84,tw,th*.1,0,'#111');c.font=`700 ${th*.05}px Rubik,sans-serif`;c.fillStyle='#ffd23f';c.fillText('UNVERIFIED VIDEO • VIEWER DISCRETION ADVISED • UNVERIFIED VIDEO •',tx+tw-((t*U*18)%(tw*1.6)),ty+th*.905);
+  }else if(t<5.2){ // party room, kids at the glass door
+    c.save();c.translate(shake[0],shake[1]);const z=1+easeIn(seg(t,3.8,5.2))*.8;c.translate(tx+tw*.5,ty+th*.45);c.scale(z,z);c.translate(-(tx+tw*.5),-(ty+th*.45));
+    c.fillStyle='#d9c7a0';c.fillRect(tx-tw,ty-th,tw*3,th*3);rr(c,tx+tw*.12,ty+th*.08,tw*.76,th*.72,0,'#cfd9de');
+    c.save();c.beginPath();c.rect(tx+tw*.14,ty+th*.1,tw*.72,th*.68);c.clip();c.fillStyle='#7bb0d9';c.fillRect(tx,ty,tw,th);
+    for(let i=0;i<14;i++)circ(c,tx+tw*(.1+i*.065),ty+th*(.28+(i%3)*.05),th*.12,['#1f4d22','#26592a','#18401b'][i%3]);c.fillStyle='rgba(0,0,0,.25)';c.fillRect(tx,ty+th*.25,tw,th*.12);
+    c.fillStyle='#5f9a4a';c.fillRect(tx,ty+th*.45,tw,th);rr(c,tx+tw*.35,ty+th*.5,tw*.3,th*.05,0,'#fff');ln(c,tx+tw*.38,ty+th*.55,tx+tw*.38,ty+th*.66,'#fff',2);ln(c,tx+tw*.62,ty+th*.55,tx+tw*.62,ty+th*.66,'#fff',2);
+    rr(c,tx+tw*.47,ty+th*.44,tw*.06,th*.06,U*.5,'#f7d6e0');for(let i=0;i<4;i++){circ(c,tx+tw*(.22+i*.18),ty+th*(.2+Math.sin(t+i)*.03),th*.05,['#ff4d5e','#ffd23f','#2f7fe0','#b05cff'][i]);ln(c,tx+tw*(.22+i*.18),ty+th*(.25+Math.sin(t+i)*.03),tx+tw*(.22+i*.18),ty+th*.45,'#eee',1)}
+    c.restore();ln(c,tx+tw*.5,ty+th*.08,tx+tw*.5,ty+th*.8,'#9aa',3);
+    [11,27,44,58,63].forEach((num,i)=>partyKid(c,tx+tw*(.18+i*.16),ty+th*(.92+(i%2)*.04),th*.1,num,-.9-(i%2)*.4,t+i));
+    c.restore();
+  }else if(t<6.2){ // whip to the kitchen
+    c.save();c.translate(shake[0]-easeIO(seg(t,5.2,5.5))*tw*.0,shake[1]);c.fillStyle='#e8dcc0';c.fillRect(tx,ty,tw,th);
+    poly(c,[[tx+tw*.3,ty],[tx+tw*.7,ty],[tx+tw*.58,ty+th*.6],[tx+tw*.42,ty+th*.6]],'#cbbd9c');rr(c,tx+tw*.42,ty+th*.15,tw*.16,th*.25,0,'#7bb0d9');rr(c,tx+tw*.35,ty+th*.55,tw*.3,th*.08,0,'#8a6b4a');
+    partyKid(c,tx+tw*.47,ty+th*.47,th*.07,7,-1.3,t*2);
+    [11,27,44].forEach((num,i)=>partyKid(c,tx+tw*(.2+i*.3)+(t-5.2)*tw*.2*(i===2?-1:1),ty+th*.95,th*.12,num,null,t));c.restore();
+    if(t<5.45){c.fillStyle='rgba(255,255,255,.25)';for(let i=0;i<10;i++)c.fillRect(tx,ty+Math.random()*th,tw,2)}
+  }else{ // the kitchen window: a narrow alley
+    c.save();c.translate(shake[0],shake[1]);const z=1+easeIO(seg(t,6.2,7.4))*.35;c.translate(tx+tw*.5,ty+th*.5);c.scale(z,z);c.translate(-(tx+tw*.5),-(ty+th*.5));
+    c.fillStyle='#3d4a36';c.fillRect(tx-tw,ty-th,tw*3,th*3);for(let i=0;i<16;i++)circ(c,tx+tw*(.05+i*.065),ty+th*(.15+(i%4)*.06),th*.13,['#1f3a1c','#2a4a24','#17301a'][i%3]);
+    c.fillStyle='#4b4b45';c.fillRect(tx,ty+th*.82,tw,th);
+    rr(c,tx-tw*.1,ty+th*.45,tw*.55,th*.4,0,'#9a958a');for(let y=0;y<5;y++)for(let x=0;x<8;x++)c.strokeRect(tx-tw*.1+x*tw*.07+(y%2)*tw*.035,ty+th*.45+y*th*.08,tw*.07,th*.08);
+    if(t>7.6&&t<9.4){const ax=lerp(tx+tw*.78,tx+tw*.38,seg(t,7.6,9.2));alien(c,ax,ty+th*.84,th*.5,t)}
+    rr(c,tx+tw*.7,ty+th*.25,tw*.4,th*.6,0,'#c9c2b3');rr(c,tx+tw*.7,ty+th*.25,tw*.4,th*.05,0,'#8f877a');
+    [[.14,7],[.86,27]].forEach(([fx,num])=>partyKid(c,tx+tw*fx,ty+th*1.02,th*.14,num,null,t));
+    c.restore();
+  }
+  if(t>2.6&&t<9.8){c.fillStyle='rgba(255,255,255,.04)';for(let y=0;y<th;y+=4)c.fillRect(tx,ty+y,tw,1.5);c.fillStyle='#fff';c.font=`700 ${th*.06}px monospace`;c.textAlign='left';c.fillText('PLAY ▶',tx+U*2,ty+th*.09);c.textAlign='right';c.fillText('BIRTHDAY  4:17 PM',tx+tw-U*2,ty+th*.95);if(Math.sin(t*6)>0)circ(c,tx+tw-U*4,ty+th*.07,U*1.2,'#ff3b30')}
+  if(t>=9.8){for(let i=0;i<300;i++){const v=Math.random()*255|0;c.fillStyle=`rgb(${v},${v},${v})`;c.fillRect(tx+Math.random()*tw,ty+Math.random()*th,U*1.2,U*1.2)}}
+  c.restore();
+  c.fillStyle='rgba(255,255,255,.08)';c.beginPath();c.roundRect(tx,ty,tw,th*.3,U*2);c.fill();
+  // the ball in the closet, on a chair
+  const cx0=W*.84,cy0=H*.74,lean=t>3.4&&t<7.9?easeOut(seg(t,3.4,4.2))*U*3:0,jolt=t>7.9&&t<8.6?-Math.sin(seg(t,7.9,8.6)*Math.PI)*U*12:0;
+  rr(c,cx0-U*11,H*.82,U*22,U*3,U*1,'#5b3a1f');ln(c,cx0-U*9,H*.85,cx0-U*9,H,'#5b3a1f',U*1.5);ln(c,cx0+U*9,H*.85,cx0+U*9,H,'#5b3a1f',U*1.5);rr(c,cx0+U*7,H*.5,U*3,H*.34,U*1,'#5b3a1f');
+  const p=intro(t,b,cx0-lean,cy0+jolt,r,.8);drawBall(c,p.x,p.y,p.r,n,0);
+  if(t>1.4&&t<2.6)bubble(c,cx0-U*4,cy0-r-U*12,'...huh?',U*3.4);
+  if(t>5.5&&t<7.3)bubble(c,cx0-U*10,cy0-r-U*12,'Scoot over, little guys!',U*3.2);
+  if(t>8&&t<9.6)bubble(c,cx0-U*4,cy0-r-U*14,'AAAAAH!',U*3.8);
+  if(t>10&&t<11.4)bubble(c,cx0-U*12,cy0-r-U*12,"I'm sleeping in here tonight.",U*3);
+  cues(this,t,[[.4,'hum'],[2.6,'static'],[5.2,'whoosh'],[7.85,'boom'],[8,'screech'],[9.8,'static']]);
+}};
 // ---- developer previews
-const GAGNAME={nice:'69 Nice!',titanic:'Ocean liner epic',hallway:'Hallway brawl',cellar:'Cellar game',shower:'Shower scene',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
+const GAGNAME={nice:'69 Nice!',titanic:'Ocean liner epic',hallway:'Hallway brawl',cellar:'Cellar game',shower:'Shower scene',closet:'Closet TV sighting',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
   slots:'Slot machine',roulette:'Roulette',blackjack:'Blackjack',dice:'Dice',fountain:'Fountain show',chapel:'Wedding chapel',saw:'Saw in half',fans:'Feather fans',flush:'Royal flush',limo:'Limo',neon:'Neon sign',lounge:'Lounge singer',wrecking:'Wrecking ball',ninja:'Ninja',pinball:'Pinball',dogfetch:'Dog fetch',
   boulder:'Boulder',ape:'Giant ape',slowmo:'Slow-mo',liner:'Ocean liner',trex:'T-rex',moonbike:'Moon bike',sabers:'Laser swords',bridge:"Wizard's bridge",heist:'Heist',timejump:'Time jump',uphouse:'Balloon house',sharkstorm:'Shark storm'};
 let devBusy=false;
