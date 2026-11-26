@@ -255,7 +255,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 /* ---- Darlene's Vegas: every ball twinkles */
 .bb,.mini,.bgword b{position:relative}
 :root[data-skin=vegas] .ball::before,:root[data-skin=vegas] .bb::before,:root[data-skin=vegas] .mini::before,:root[data-skin=vegas] .bgword b::before,
-:root[data-skin=vegas] .bb::after,:root[data-skin=vegas] .mini::after{content:"";position:absolute;z-index:3;width:30%;height:30%;left:10%;top:6%;pointer-events:none;background:radial-gradient(circle,#fff 0 18%,#fff6c8 30%,#f2c94c 60%);clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 0 4px #ffe07a);animation:twinkle 2.6s ease-in-out infinite;opacity:0}
+:root[data-skin=vegas] .bb::after,:root[data-skin=vegas] .mini::after{content:"";position:absolute;z-index:3;width:30%;height:30%;left:10%;top:6%;pointer-events:none;background:radial-gradient(circle,#fff 0 18%,#fff6c8 30%,#f2c94c 60%);clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);animation:twinkle 2.6s ease-in-out infinite;opacity:0}
 :root[data-skin=vegas] .bb::after,:root[data-skin=vegas] .mini::after{left:auto;top:auto;right:8%;bottom:10%;width:22%;height:22%;animation-delay:1.3s;animation-duration:3.1s}
 :root[data-skin=vegas] .mini:nth-child(2n)::before{animation-delay:.7s}
 :root[data-skin=vegas] .mini:nth-child(3n)::before{animation-delay:1.6s}
@@ -918,7 +918,7 @@ function projShow(n){
 const easeOut=t=>1-(1-t)**3,easeIn=t=>t*t*t,easeIO=t=>t<.5?4*t*t*t:1-((-2*t+2)**3)/2,clamp01=t=>Math.max(0,Math.min(1,t));
 const seg=(t,a,b)=>clamp01((t-a)/(b-a));
 function wackyCanvas(){
-  const cv=$('wacky'),p=$('proj'),dpr=Math.min(2,devicePixelRatio||1),W=p.clientWidth,H=p.clientHeight;
+  const cv=$('wacky'),p=$('proj'),W=p.clientWidth,H=p.clientHeight,dpr=canvasDpr(W,H);cv._dpr=dpr;
   cv.width=W*dpr;cv.height=H*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);cv.style.display='block';
   return {cv,ctx,W,H};
 }
@@ -2417,7 +2417,7 @@ function wackyPlay(n,keyName){
       const z=1+(Z-1)*easeIO(seg(t,0,.8)),k=Math.min(1,dt*4.5);
       camX+=(WTRACK.x-camX)*k;camY+=(WTRACK.y-camY)*k;
       const hw=W/2/z,hh=H/2/z,cx=Math.min(W-hw,Math.max(hw,camX)),cy=Math.min(H-hh,Math.max(hh,camY));
-      CAM={cx,cy,z,W,H,dpr:Math.min(2,devicePixelRatio||1)};WTRACK.got=0;
+      CAM={cx,cy,z,W,H,dpr:cv._dpr||1};WTRACK.got=0;
       ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2,H/2);ctx.scale(z,z);ctx.translate(-cx,-cy);
       try{sc.draw.call(S,ctx,W,H,t,b,n)}catch(e){console.error('wacky',key,e)}ctx.restore();if(SFXMAP[key])cues(S2,t,SFXMAP[key]);requestAnimationFrame(frame);
     };
@@ -2435,7 +2435,8 @@ function wackyRoll(){
   return false;
 }
 async function projLand(n,since){
-  const hold=2600-(Date.now()-since);if(hold>0)await wait(hold);
+  // with the announcer, the chime + call take ~3.6s (single) or ~4.7s (said twice); hold the same without him
+  const target=voiceOn()?2600:(st.twice?4700:3600),hold=target-(Date.now()-since);if(hold>0)await wait(hold);
   if(pending!==n)return;
   const fly=$('fly'),cell=$('p'+n);
   $('flybg').classList.remove('on');
@@ -2469,13 +2470,15 @@ document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement
 // ================= Tumbler: a spinning bingo cage with light ball physics =================
 let cdStart=0,cdDur=1;
 const TUMB_N=22,TUMB_R=0.14;
+// pixel budget: full sharpness on phones/laptops, capped on large high-DPI monitors
+function canvasDpr(w,h,budget){const d=Math.min(2,window.devicePixelRatio||1);return Math.max(.75,Math.min(d,Math.sqrt((budget||3.7e6)/Math.max(1,w*h))))}
 function tumbColors(){const cs=getComputedStyle(document.documentElement);return ['--B','--I','--N','--G','--O'].map(v=>cs.getPropertyValue(v).trim()||'#888')}
 function makeTumbler(wrap){
   const cv=wrap.querySelector('canvas'),ctx=cv.getContext('2d');
   const balls=[];
   for(let i=0;i<TUMB_N;i++){const a=Math.random()*6.28,d=Math.random()*0.6;balls.push({x:Math.cos(a)*d,y:0.3+Math.sin(a)*d*0.5,vx:0,vy:0,c:i%5})}
   const T={wrap,cv,ctx,balls,theta:0,w:0,eject:null,tray:null,W:0,H:0,cols:tumbColors(),frame:0};
-  const size=()=>{const dpr=Math.min(2,devicePixelRatio||1);T.W=wrap.clientWidth;T.H=wrap.clientHeight;cv.width=Math.max(1,T.W*dpr);cv.height=Math.max(1,T.H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)};
+  const size=()=>{T.W=wrap.clientWidth;T.H=wrap.clientHeight;const dpr=canvasDpr(T.W,T.H,6e5);T.idleDrawn=false;cv.width=Math.max(1,T.W*dpr);cv.height=Math.max(1,T.H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)};
   T.ro=new ResizeObserver(size);T.ro.observe(wrap);size();
   return T;
 }
@@ -2548,8 +2551,10 @@ function tumbLoop(now){
   tumbs.forEach((T,i)=>{
     const vis=!T.wrap.hidden&&(i===1?projOpen:!projOpen);
     if(!vis)return;
+    const moving=inten>0||T.w>.01||T.eject||T.balls.some(b=>Math.abs(b.vx)+Math.abs(b.vy)>.03);
+    if(!moving&&T.idleDrawn&&(++T.idleTick%60))return;
     if(!reduce){tumbStep(T,dt/2,inten);tumbStep(T,dt/2,inten)}
-    tumbDraw(T,now);
+    tumbDraw(T,now);T.idleDrawn=!moving;T.idleTick=T.idleTick||0;
   });
   requestAnimationFrame(tumbLoop);
 }
@@ -2586,7 +2591,7 @@ function fanfare(big){
 }
 // ---- shared particle canvas: confetti from the corners and sparkle bursts
 const parts=[];let partRun=0,cW=0,cH=0;
-function partCanvas(){const cv=$('confetti'),dpr=Math.min(2,window.devicePixelRatio||1);if(cW!==innerWidth||cH!==innerHeight){cW=innerWidth;cH=innerHeight;cv.width=cW*dpr;cv.height=cH*dpr;cv.getContext('2d').setTransform(dpr,0,0,dpr,0,0)}return cv.getContext('2d')}
+function partCanvas(){const cv=$('confetti'),dpr=canvasDpr(innerWidth,innerHeight,1.6e6);if(cW!==innerWidth||cH!==innerHeight){cW=innerWidth;cH=innerHeight;cv.width=cW*dpr;cv.height=cH*dpr;cv.getContext('2d').setTransform(dpr,0,0,dpr,0,0)}return cv.getContext('2d')}
 function partCols(){const cs=getComputedStyle(document.documentElement);return ['--B','--I','--G','--O','--gold'].map(v=>cs.getPropertyValue(v).trim()).concat(['#ffffff'])}
 function star(ctx,r){ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,rr=i%2?r*.32:r;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}ctx.closePath();ctx.fill()}
 function partLoop(){
