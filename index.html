@@ -2288,7 +2288,7 @@ function newspaper(c,W,H,t,t0,head,sub,photo){const k=easeOut(seg(t,t0,t0+.8)),U
   c.font=`900 ${U*6}px Georgia,serif`;c.fillText('THE DAILY BINGO',0,-ph/2+U*8);ln(c,-pw/2+U*3,-ph/2+U*10,pw/2-U*3,-ph/2+U*10,'#111',2);ln(c,-pw/2+U*3,-ph/2+U*11.2,pw/2-U*3,-ph/2+U*11.2,'#111',1);
   c.font=`900 ${U*7.2}px Georgia,serif`;head.forEach((l,i)=>c.fillText(l,0,-ph/2+U*20+i*U*7.6));
   const py=-ph/2+U*22+head.length*U*7.6;rr(c,-pw*.38,py,pw*.42,ph*.4,2,'#cfcfcf');c.save();c.beginPath();c.rect(-pw*.38,py,pw*.42,ph*.4);c.clip();photo(-pw*.38,py,pw*.42,ph*.4);c.restore();
-  c.font=`700 ${U*3.2}px Georgia,serif`;c.textAlign='left';sub.forEach((l,i)=>c.fillText(l,pw*.07,py+U*3.6+i*U*4));
+  c.fillStyle='#1a1a1a';c.font=`700 ${U*3.2}px Georgia,serif`;c.textAlign='left';sub.forEach((l,i)=>c.fillText(l,pw*.07,py+U*3.6+i*U*4));
   for(let i=0;i<5;i++)rr(c,pw*.07,py+U*5+sub.length*U*4+i*U*2.6,pw*.36*(i%3?1:.7),U*.9,0,'#9a9a9a');c.restore()}
 WACKY.kaiju={dur:13.6,end(){try{$('wacky').style.filter=''}catch(e){}},draw(c,W,H,t,b,n){const U=H/100,r=U*7.6,sea=H*.74;
   c.canvas.style.filter='grayscale(1) contrast(1.2) brightness(1.05)';
