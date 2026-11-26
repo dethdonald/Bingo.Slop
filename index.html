@@ -336,6 +336,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
       <div class="panel" id="autoPanel">
         <button class="stoggle" id="stoggle" aria-expanded="false" aria-controls="sbody"><svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.3 2h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8c.1.6.1 1.2 0 1.8l2 1.8-1.7 2.9-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6c-.6-.2-1.2-.5-1.7-.9l-2.5.9-1.7-2.9 2-1.8a5.6 5.6 0 0 1 0-1.8l-2-1.8 1.7-2.9 2.5.9c.5-.4 1.1-.7 1.7-.9zM12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z" transform="translate(0 1.5)"/></svg><span>Settings</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="sbody" id="sbody"><div class="sinner" id="sinner">
+        <div class="field"><span>Announcer voice</span><div class="chips" id="voiceSw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div></div>
         <div class="field"><span>Projector screen shape</span><div class="chips" id="ratios"><button class="chip" data-r="16:9">16:9 TV</button><button class="chip" data-r="16:10">16:10</button><button class="chip" data-r="4:3">4:3</button><button class="chip" data-r="fill">Fill screen</button></div></div>
         <div class="field"><span>Theme</span><div class="chips" id="skins"><button class="chip" data-k="classic">Classic green</button><button class="chip" data-k="vegas">Darlene's Vegas</button></div></div>
         <p class="note vhint" id="vhint">Voice options appear here when you switch to Voice caller.</p>
@@ -439,7 +440,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
+let st={voiceOff:false,ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 if(!st.cdSound)st.cdSound=st.tick===false?'off':'tick';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
@@ -722,7 +723,7 @@ function ttsSay(text){
     if(speechSynthesis.speaking||speechSynthesis.pending){speechSynthesis.cancel();setTimeout(go,150)}else go();
   });
 }
-const voiceOn=()=>st.mode==='auto'||st.voice;
+const voiceOn=()=>!st.voiceOff&&(st.mode==='auto'||st.voice);
 
 function render(pop){
   const c=st.called,last=c[c.length-1],auto=st.mode==='auto';
@@ -749,7 +750,7 @@ function render(pop){
   $('voice').hidden=auto;$('voice').setAttribute('aria-pressed',st.voice);
   $('play').hidden=!auto||!st.every||done;
   $('play').textContent=running?'Pause':'Start auto';$('play').classList.toggle('run',running);
-  document.querySelectorAll('.vonly').forEach(e=>e.hidden=!auto);$('vhint').hidden=auto;$('repeat').hidden=!auto;
+  document.querySelectorAll('.vonly').forEach(e=>e.hidden=!auto);$('vhint').hidden=auto;$('repeat').hidden=!auto||!!st.voiceOff;
   $('tumbMain').hidden=$('tumbProj').hidden=!(auto&&st.every);
   applySkin();
   document.querySelectorAll('#every .chip').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.s)===st.every));
@@ -803,7 +804,7 @@ async function callNext(){
 }
 
 $('call').addEventListener('click',()=>{if(st.mode==='auto'&&st.every&&!running)running=true;callNext()});
-$('play').addEventListener('click',()=>{if(running){stopAuto();stopVoice()}else{running=true;if(!st.called.length)callNext();else{say('Next number coming up.');countdown()}}});
+$('play').addEventListener('click',()=>{if(running){stopAuto();stopVoice()}else{running=true;if(!st.called.length)callNext();else{if(voiceOn())say('Next number coming up.');countdown()}}});
 $('undo').addEventListener('click',()=>{if(!st.called.length)return;stopAuto();stopVoice();st.called.pop();save();render(false)});
 $('voice').addEventListener('click',()=>{st.voice=!st.voice;save();render(false);const n=st.called[st.called.length-1];if(st.voice&&n)sayCall(n)});
 $('say').addEventListener('click',()=>{const n=st.called[st.called.length-1];if(n)sayCall(n)});
@@ -831,6 +832,11 @@ function applyRatio(){
   document.querySelectorAll('#ratios .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===st.ratio));
 }
 $('ratios').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.ratio=b.dataset.r;save();applyRatio()});
+function applyVoiceSw(){
+  document.querySelectorAll('#voiceSw .chip').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='off')===!!st.voiceOff));
+  $('voice').disabled=!!st.voiceOff;
+}
+$('voiceSw').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.voiceOff=b.dataset.v==='off';save();applyVoiceSw();render(false);if(st.voiceOff)stopVoice()});
 function applySkin(){
   const v=st.skin==='vegas';
   if(v)document.documentElement.dataset.skin='vegas';else delete document.documentElement.dataset.skin;
@@ -838,7 +844,7 @@ function applySkin(){
   document.querySelectorAll('#skins .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===st.skin));
 }
 $('skins').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.skin=b.dataset.k;save();applySkin()});
-applySkin();applyRatio();
+applySkin();applyRatio();applyVoiceSw();
 function setOpen(o){st.setOpen=o;save();$('autoPanel').classList.toggle('open',o);$('stoggle').setAttribute('aria-expanded',o);$('sinner').inert=!o}
 $('stoggle').addEventListener('click',()=>setOpen(!st.setOpen));
 setOpen(!!st.setOpen);
