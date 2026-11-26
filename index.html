@@ -1712,7 +1712,7 @@ Object.assign(WACKY,{
   }}
 });
 // how close the camera gets for each gag (default 1.7x); machine-sized scenes get less
-const WZOOM={cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
+const WZOOM={shower:1.15,cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
 // ---- the epic: two balls on an ocean liner, three scenes, original sad song
 function linerPart(c,side,W,U,crackK){
   const deck=-U*15,keel=U*8,jag=[[0,deck],[U*1.5*crackK,deck+U*5],[-U*1.5*crackK,deck+U*11],[U*1*crackK,deck+U*17],[0,keel]];
@@ -1862,8 +1862,47 @@ WACKY.cellar={dur:8,draw(c,W,H,t,b,n){const U=H/100,floor=H*.86,r=U*7.5,n2=(()=>
   word(c,H,W*.75,H*.25,seg(t,4.3,5.2),'SNAP!','#ffd23f');
   cues(this,t,[[.8,'click'],[2.4,'rasp'],[3.3,'rasp'],[4.3,'thump'],[4.6,'boing'],[6.4,'ding']]);
 }};
+// ---- black-and-white shower parody: the ball gets... dabbed
+SFX4.shower=(a,t)=>{sfxNoise(a,t,5,'highpass',3500,4500,.08)};
+SFX4.squish=(a,t)=>{sfxTone(a,t,'sine',500,120,.12,.2);sfxNoise(a,t,.1,'lowpass',1200,300,.2)};
+WACKY.shower={dur:7.8,draw(c,W,H,t,b,n){const U=H/100,floor=H*.92,r=U*9,gx=W*.5,gy=H*.6;
+  c.canvas.style.filter='grayscale(1) contrast(1.15)';c.save();
+  c.fillStyle='#e9e9e9';c.fillRect(0,0,W,H);
+  for(let y=0;y<floor;y+=U*7)for(let x=0;x<W;x+=U*7){c.strokeStyle='#b5b5b5';c.lineWidth=1.5;c.strokeRect(x,y,U*7,U*7)}
+  c.fillStyle='#cfcfcf';c.fillRect(0,floor,W,H);
+  // shower head and spray
+  ln(c,gx+U*22,H*.04,gx+U*22,H*.14,'#777',U*1.2);ln(c,gx+U*22,H*.14,gx+U*14,H*.18,'#777',U*1.2);ell(c,gx+U*12,H*.19,U*5,U*2,'#888',-.4);
+  const on=t<6.4;if(on)for(let i=0;i<22;i++){const u=((t*2.4+i*.137)%1),sx=gx+U*12+(i-11)*U*1.1+u*(i-11)*U*1.4,sy=H*.21+u*(floor-H*.21);ln(c,sx,sy,sx+U*.4,sy+U*3,'rgba(120,140,160,.55)',2)}
+  // the drain, swirling at the end
+  ell(c,gx,floor+U*3,U*6,U*1.6,'#777');ell(c,gx,floor+U*3,U*4,U*1,'#333');
+  if(t>5)for(let i=0;i<14;i++){const u=seg(t,5,7.2),a=t*6+i*.45,R=U*(12-i*.7)*(1-u*.5);ell(c,gx+Math.cos(a)*R,floor+U*3+Math.sin(a)*R*.25,U*1.2,U*.5,`rgba(20,20,20,${.7*(1-u)})`)}
+  // the ball, humming
+  const p=intro(t,b,gx,gy,r,.8),scared=t>3.4&&t<5.2,shake=scared?Math.sin(t*60)*U*.8:0,leave=easeIn(seg(t,6.8,7.7));
+  drawBall(c,(t<.8?p.x:gx-U*8)+shake+leave*W*.7,t<.8?p.y:gy,t<.8?p.r:r,n,0);
+  // ink dabs land on the ball's rim, never on the number
+  const bxx=gx-U*8+shake+leave*W*.7;[[-.8,-.45],[.78,-.5],[-.7,.6],[.75,.55],[0,-.88]].forEach(([dx,dy],i)=>{if(t>3.75+i*.22)circ(c,bxx+dx*r,gy+dy*r,r*.2,'rgba(15,15,15,.85)')});
+  if(t>1&&t<2.8){c.fillStyle='#555';c.font=`700 ${U*4}px Rubik,sans-serif`;['♪','♫'].forEach((m,i)=>{const u=((t*.8+i*.5)%1);c.fillText(m,gx-U*2+i*U*4,gy-r-U*2-u*U*8)})}
+  // curtain and the shadowy figure behind it
+  const open=easeOut(seg(t,3.3,3.55)),cw=W*.55*(1-open*.82),fx=lerp(W*.05,W*.28,easeIO(seg(t,1.8,3.2)));
+  if(t>1.6&&t<5.4){const fa=Math.min(1,seg(t,1.6,2.6)),dab=t>3.6&&t<4.9?Math.sin((t-3.6)*14):0,leaveF=easeIn(seg(t,4.9,5.4));
+    c.save();c.globalAlpha=t<3.3?.55*fa:1;c.translate(fx-leaveF*W*.35,floor);
+    poly(c,[[-U*9,0],[U*9,0],[U*6,-U*40],[-U*6,-U*40]],'#151515');circ(c,0,-U*45,U*7,'#151515');poly(c,[[-U*8,-U*47],[U*8,-U*47],[0,-U*56]],'#151515');
+    const ax=U*14+(t>3.6?U*6:0),ay=-U*36-dab*U*8;ln(c,U*4,-U*34,ax,ay,'#151515',U*3);
+    rr(c,ax-U*1.8,ay-U*14,U*3.6,U*14,U*1.2,'#151515');ell(c,ax,ay-U*15,U*2.4,U*1,'#151515');rr(c,ax-U*1.4,ay-U*3,U*2.8,U*3,U*.4,'#444');
+    c.restore()}
+  c.save();c.globalAlpha=.78;for(let i=0;i<9;i++){const x0=i*cw/9;c.fillStyle=i%2?'#f6f6f6':'#dcdcdc';c.fillRect(x0,H*.05,cw/9+1,floor-H*.05)}c.restore();
+  ln(c,0,H*.05,W*.6,H*.05,'#666',U*.8);for(let i=0;i<10;i++)circ(c,i*cw/9,H*.05,U*.8,'#666');
+  // film look
+  c.fillStyle='rgba(0,0,0,.14)';for(let i=0;i<70;i++)c.fillRect(Math.random()*W,Math.random()*H,2,2);
+  const v=c.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,W*.65);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.55)');c.fillStyle=v;c.fillRect(0,0,W,H);
+  c.restore();
+  if(t>3.4&&t<4.8)bubble(c,gx+U*6,gy-r-U*12,'EEEEEEK!',U*3.8);
+  word(c,H,W*.25,H*.25,seg(t,3.6,4.2),'DAB!','#fff');word(c,H,W*.3,H*.4,seg(t,4.0,4.6),'DAB!','#fff');word(c,H,W*.22,H*.55,seg(t,4.4,5),'DAB!','#fff');
+  if(t>5.7&&t<6.9)bubble(c,gx-U*8,gy-r-U*12,"...I'm fine. Just inky.",U*3.2);
+  cues(this,t,[[.3,'shower'],[3.3,'whoosh'],[3.6,'squish'],[3.82,'squish'],[4.04,'squish'],[4.26,'squish'],[4.48,'squish'],[5.2,'shower']]);
+}};
 // ---- developer previews
-const GAGNAME={nice:'69 Nice!',titanic:'Ocean liner epic',hallway:'Hallway brawl',cellar:'Cellar game',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
+const GAGNAME={nice:'69 Nice!',titanic:'Ocean liner epic',hallway:'Hallway brawl',cellar:'Cellar game',shower:'Shower scene',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
   slots:'Slot machine',roulette:'Roulette',blackjack:'Blackjack',dice:'Dice',fountain:'Fountain show',chapel:'Wedding chapel',saw:'Saw in half',fans:'Feather fans',flush:'Royal flush',limo:'Limo',neon:'Neon sign',lounge:'Lounge singer',wrecking:'Wrecking ball',ninja:'Ninja',pinball:'Pinball',dogfetch:'Dog fetch',
   boulder:'Boulder',ape:'Giant ape',slowmo:'Slow-mo',liner:'Ocean liner',trex:'T-rex',moonbike:'Moon bike',sabers:'Laser swords',bridge:"Wizard's bridge",heist:'Heist',timejump:'Time jump',uphouse:'Balloon house',sharkstorm:'Shark storm'};
 let devBusy=false;
@@ -1897,7 +1936,7 @@ function wackyPlay(n,keyName){
     let camX=b.x,camY=b.y,lastT=0;WTRACK={n,x:b.x,y:b.y,got:0};
     const frame=now=>{
       const t=(now-t0)/1000,dt=Math.min(.05,t-lastT);lastT=t;
-      if(pending!==n||!projOpen||t>sc.dur){ctx.clearRect(0,0,W,H);cv.style.display='none';WTRACK=null;CAM=null;if(sc.end)try{sc.end.call(S)}catch(e){}res();return}
+      if(pending!==n||!projOpen||t>sc.dur){ctx.clearRect(0,0,W,H);cv.style.display='none';cv.style.filter='';WTRACK=null;CAM=null;if(sc.end)try{sc.end.call(S)}catch(e){}res();return}
       // camera: ease in to a close-up and smoothly follow the ball, never showing past the edges
       const z=1+(Z-1)*easeIO(seg(t,0,.8)),k=Math.min(1,dt*4.5);
       camX+=(WTRACK.x-camX)*k;camY+=(WTRACK.y-camY)*k;
