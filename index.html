@@ -2180,28 +2180,29 @@ function makeTumbler(wrap){
   return T;
 }
 function tumbStep(T,dt,inten){
-  // drum spin eases toward a target set by how close the next call is
-  const target=inten>0?1.2+inten*5.5:0;
-  T.w+=(target-T.w)*Math.min(1,dt*2);T.theta+=T.w*dt;
+  // Real tumbler physics: gravity pulls down, the spinning wall drags touching balls along by friction.
+  // Balls ride up the side until gravity beats the wall's grip, then tumble back through the middle.
+  // Top wall speed stays below what would pin balls to the wall (w^2*R < g), so nothing "falls up".
+  const G=9,target=inten>0?.7+inten*1.9:0;
+  T.w+=(target-T.w)*Math.min(1,dt*1.5);T.theta+=T.w*dt;
   const B=T.balls,r=TUMB_R,lim=1-r;
   for(const b of B){
-    b.vy+=5.2*dt;
-    if(inten>0&&b.y>0.25&&Math.random()<0.18){b.vy-=(5+9*inten)*Math.random();b.vx+=(Math.random()-.5)*3.5*inten}
-    b.vx*=0.995;b.vy*=0.995;
-    const sp=Math.hypot(b.vx,b.vy);if(sp>7){b.vx*=7/sp;b.vy*=7/sp}
+    b.vy+=G*dt;
+    b.vx*=0.998;b.vy*=0.998;
+    const sp=Math.hypot(b.vx,b.vy);if(sp>6){b.vx*=6/sp;b.vy*=6/sp}
     b.x+=b.vx*dt;b.y+=b.vy*dt;
   }
   for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++){
     const a=B[i],b=B[j],dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,m=2*r;
     if(d2<m*m&&d2>1e-9){const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,o=(m-d)/2;a.x-=nx*o;a.y-=ny*o;b.x+=nx*o;b.y+=ny*o;
-      const rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rv<0){const jj=-(1+0.8)*rv/2;a.vx-=jj*nx;a.vy-=jj*ny;b.vx+=jj*nx;b.vy+=jj*ny}}
+      const rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rv<0){const jj=-(1+0.6)*rv/2;a.vx-=jj*nx;a.vy-=jj*ny;b.vx+=jj*nx;b.vy+=jj*ny}}
   }
   for(const b of B){
     const d=Math.hypot(b.x,b.y);
-    if(d>lim){const nx=b.x/d,ny=b.y/d;b.x=nx*lim;b.y=ny*lim;
-      const vn=b.vx*nx+b.vy*ny;if(vn>0){b.vx-=1.7*vn*nx;b.vy-=1.7*vn*ny}
-      // the cage wall drags balls round with it
-      const tx=-ny,ty=nx,vt=b.vx*tx+b.vy*ty,wt=T.w*1;b.vx+=(wt-vt)*0.3*tx;b.vy+=(wt-vt)*0.3*ty}
+    if(d>=lim){const nx=b.x/d,ny=b.y/d;b.x=nx*lim;b.y=ny*lim;
+      const vn=b.vx*nx+b.vy*ny;if(vn>0){b.vx-=1.55*vn*nx;b.vy-=1.55*vn*ny}
+      // friction: nudge the ball's sliding speed toward the wall's speed at that point
+      const tx=-ny,ty=nx,vt=b.vx*tx+b.vy*ty,wall=T.w*lim,k=Math.min(1,dt*14);b.vx+=(wall-vt)*k*tx;b.vy+=(wall-vt)*k*ty}
   }
 }
 function tumbDraw(T,now){
