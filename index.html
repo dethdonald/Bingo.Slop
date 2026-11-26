@@ -2266,9 +2266,12 @@ $('devBtn').addEventListener('click',()=>{const o=$('devBody').hidden;$('devBody
 $('devGrid').addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(b)devPreview(b.dataset.g)});
 $('devRandom').addEventListener('click',()=>devPreview(pick(Object.keys(WACKY).filter(k=>k!=='nice'&&(st.edgy!==false||!EDGY.has(k))))));
 $('devAll').addEventListener('click',async()=>{for(const k of Object.keys(WACKY).filter(k=>k!=='nice')){if(!(await devPreview(k)))break;await wait(400)}});
+// long multi-scene epics (10s+) come up about a quarter as often as regular gags
+const gagWeight=k=>WACKY[k].dur>=10?.25:1;
+function wpick(keys){const tot=keys.reduce((a,k)=>a+gagWeight(k),0);let r=Math.random()*tot;for(const k of keys){r-=gagWeight(k);if(r<=0)return k}return keys[keys.length-1]}
 function wackyPlay(n,keyName){
   return new Promise(res=>{
-    const keys=Object.keys(WACKY).filter(k=>k!==lastWacky&&k!=='nice'&&(st.edgy!==false||!EDGY.has(k))),key=keyName||(WACKY[window.__forceWacky]?window.__forceWacky:pick(keys)),sc=WACKY[key],S={},S2={},{cv,ctx,W,H}=wackyCanvas();lastWacky=key;
+    const keys=Object.keys(WACKY).filter(k=>k!==lastWacky&&k!=='nice'&&(st.edgy!==false||!EDGY.has(k))),key=keyName||(WACKY[window.__forceWacky]?window.__forceWacky:wpick(keys)),sc=WACKY[key],S={},S2={},{cv,ctx,W,H}=wackyCanvas();lastWacky=key;
     const fr=$('fly').firstElementChild.getBoundingClientRect(),pr=$('proj').getBoundingClientRect();
     const b={x:fr.left-pr.left+fr.width/2,y:fr.top-pr.top+fr.height/2,r:fr.width/2};
     $('fly').style.display='none';
