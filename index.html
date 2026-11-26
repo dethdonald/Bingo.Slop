@@ -337,6 +337,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
       <div class="panel" id="autoPanel">
         <button class="stoggle" id="stoggle" aria-expanded="false" aria-controls="sbody"><svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.3 2h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8c.1.6.1 1.2 0 1.8l2 1.8-1.7 2.9-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6c-.6-.2-1.2-.5-1.7-.9l-2.5.9-1.7-2.9 2-1.8a5.6 5.6 0 0 1 0-1.8l-2-1.8 1.7-2.9 2.5.9c.5-.4 1.1-.7 1.7-.9zM12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z" transform="translate(0 1.5)"/></svg><span>Settings</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="sbody" id="sbody"><div class="sinner" id="sinner">
+        <div class="field"><span>Bingo music</span><div class="chips" id="musicSw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div></div>
         <div class="field"><span>Wacky animations</span><div class="chips" id="wackySw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div></div>
         <div class="field"><span>Announcer voice</span><div class="chips" id="voiceSw"><button class="chip" data-v="on">On</button><button class="chip" data-v="off">Off</button></div></div>
         <div class="field"><span>Projector screen shape</span><div class="chips" id="ratios"><button class="chip" data-r="16:9">16:9 TV</button><button class="chip" data-r="16:10">16:10</button><button class="chip" data-r="4:3">4:3</button><button class="chip" data-r="fill">Fill screen</button></div></div>
@@ -443,7 +444,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={wacky:true,voiceOff:false,ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
+let st={music:true,wacky:true,voiceOff:false,ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 if(!st.cdSound)st.cdSound=st.tick===false?'off':'tick';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
@@ -835,6 +836,8 @@ function applyRatio(){
   document.querySelectorAll('#ratios .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===st.ratio));
 }
 $('ratios').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.ratio=b.dataset.r;save();applyRatio()});
+function applyMusicSw(){document.querySelectorAll('#musicSw .chip').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='on')===(st.music!==false)))}
+$('musicSw').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.music=b.dataset.v==='on';save();applyMusicSw();if(!st.music)musicStop(0.2)});
 function applyWackySw(){document.querySelectorAll('#wackySw .chip').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='on')===!!st.wacky))}
 $('wackySw').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.wacky=b.dataset.v==='on';save();applyWackySw()});
 function applyVoiceSw(){
@@ -849,7 +852,7 @@ function applySkin(){
   document.querySelectorAll('#skins .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===st.skin));
 }
 $('skins').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.skin=b.dataset.k;save();applySkin()});
-applySkin();applyRatio();applyVoiceSw();applyWackySw();
+applySkin();applyRatio();applyVoiceSw();applyWackySw();applyMusicSw();
 function setOpen(o){st.setOpen=o;save();$('autoPanel').classList.toggle('open',o);$('stoggle').setAttribute('aria-expanded',o);$('sinner').inert=!o}
 $('stoggle').addEventListener('click',()=>setOpen(!st.setOpen));
 setOpen(!!st.setOpen);
@@ -1202,30 +1205,96 @@ $('chkGrid').addEventListener('click',e=>{
   else{chkRead.push(n);b.classList.add(st.called.includes(n)?'yes':'no')}
   chkSummary();
 });
+// ================= Bingo music: original synthesized tunes =================
+const mf=m=>440*2**((m-69)/12);
+let song=null;
+function musicStart(){
+  const a=audio();if(!a)return null;
+  musicStop(0.05);
+  const out=a.createGain();out.gain.value=0.0001;out.gain.exponentialRampToValueAtTime(0.9,a.currentTime+0.15);out.connect(a.destination);
+  const nb=noiseBuf(a,1);
+  song={a,out,nb,iv:null};return song;
+}
+function musicStop(fade){
+  if(!song)return;const s=song;song=null;clearInterval(s.iv);
+  try{s.out.gain.cancelScheduledValues(s.a.currentTime);s.out.gain.setTargetAtTime(0.0001,s.a.currentTime,fade||0.15);setTimeout(()=>{try{s.out.disconnect()}catch(e){}},1500)}catch(e){}
+}
+function mDuck(on){if(!song)return;const g=song.out.gain,t=song.a.currentTime;g.cancelScheduledValues(t);g.setTargetAtTime(on?0.35:0.9,t,0.2)}
+// instruments
+function iBrass(s,t,m,d,v){const a=s.a,lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(900,t);lp.frequency.linearRampToValueAtTime(3200,t+0.05);lp.connect(s.out);
+  [0,-8,8].forEach(dt=>{const o=a.createOscillator(),g=a.createGain();o.type='sawtooth';o.frequency.value=mf(m);o.detune.value=dt;
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(v,t+0.03);g.gain.setValueAtTime(v,t+d*0.75);g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.connect(g);g.connect(lp);o.start(t);o.stop(t+d+0.05)})}
+function iPluck(s,t,m,v){const a=s.a,o=a.createOscillator(),g=a.createGain();o.type='triangle';o.frequency.value=mf(m);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(v,t+0.005);g.gain.exponentialRampToValueAtTime(0.0001,t+0.22);o.connect(g);g.connect(s.out);o.start(t);o.stop(t+0.25)}
+function iBass(s,t,m,d,v){const a=s.a,o=a.createOscillator(),g=a.createGain(),lp=a.createBiquadFilter();o.type='square';o.frequency.value=mf(m);lp.type='lowpass';lp.frequency.value=500;
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(v,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.connect(lp);lp.connect(g);g.connect(s.out);o.start(t);o.stop(t+d+0.02)}
+function iKick(s,t,v){const a=s.a,o=a.createOscillator(),g=a.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+0.15);
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.3);o.connect(g);g.connect(s.out);o.start(t);o.stop(t+0.32)}
+function iNoise(s,t,v,len,type,freq){const a=s.a,n=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();n.buffer=s.nb;f.type=type;f.frequency.value=freq;
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.0001,t+len);n.connect(f);f.connect(g);g.connect(s.out);n.start(t,Math.random()*0.5);n.stop(t+len+0.02)}
+const iSnare=(s,t,v)=>iNoise(s,t,v,0.12,'bandpass',1900),iHat=(s,t,v)=>iNoise(s,t,v,0.04,'highpass',7000),iCrash=(s,t,v)=>iNoise(s,t,v,1.8,'highpass',5000);
+// tense "checking the card" loop: drum roll swelling, pulsing bass, a suspenseful arpeggio that climbs each time round
+function tenseStart(){
+  if(st.music===false)return;const s=musicStart();if(!s)return;
+  const step=60/124/4,prog=[[57,60,64],[53,57,60],[50,53,57],[52,56,59]];
+  let i=0,next=s.a.currentTime+0.6;
+  s.iv=setInterval(()=>{
+    if(song!==s)return;
+    while(next<s.a.currentTime+0.2){
+      const bar=Math.floor(i/16)%4,sub=i%16,loop=Math.floor(i/64),up=Math.min(loop,4),ch=prog[bar].map(m=>m+up);
+      const arp=[0,1,2,3,4,5,4,3][sub%8],note=arp<3?ch[arp]:ch[arp-3]+12;
+      iPluck(s,next,note+12,0.07+0.02*bar);
+      if(sub%2===0)iBass(s,next,ch[0]-12,step*1.6,0.12);
+      const rollV=0.015+0.05*((bar*16+sub)/64);
+      iSnare(s,next,rollV);iSnare(s,next+step/2,rollV*0.8);
+      if(sub===0){iKick(s,next,0.45);if(bar===0)iCrash(s,next,0.06)}
+      if(bar===3&&sub===12)iBrass(s,next,ch[2]+12,step*4,0.05);
+      next+=step;i++;
+    }
+  },25);
+}
+// celebratory winner song: ~9 seconds, bouncy and brassy, ends on a big chord
+function winnerSong(){
+  if(st.music===false)return;const s=musicStart();if(!s)return;
+  const b=60/140,t0=s.a.currentTime+0.1;
+  const mel=[[0,67,1],[1,72,.5],[1.5,76,.5],[2,79,1],[3,76,1],[4,81,1],[5,79,.5],[5.5,76,.5],[6,72,2],[8,77,1],[9,76,.5],[9.5,74,.5],[10,76,1],[11,72,1],[12,74,1],[13,67,.5],[13.5,71,.5],[14,74,1],[15,79,1],[16,84,3]];
+  const chords=[[48,[60,64,67]],[45,[57,60,64]],[41,[57,60,65]],[43,[59,62,67]],[48,[60,64,67,72]]];
+  mel.forEach(([at,m,d])=>iBrass(s,t0+at*b,m,d*b*0.95,0.07));
+  chords.forEach(([root,ch],bar)=>{
+    const bt=t0+bar*4*b;
+    if(bar<4){[0,2].forEach(k=>ch.forEach(m=>iBrass(s,bt+k*b,m,b*0.45,0.035)));ch.forEach(m=>iBrass(s,bt+3.5*b,m,b*0.4,0.03));
+      for(let k=0;k<4;k++){iBass(s,bt+k*b,root,b*0.8,0.14);(k%2?iSnare:iKick)(s,bt+k*b,k%2?0.18:0.5)}
+      for(let k=0;k<8;k++)iHat(s,bt+k*b/2,0.05)}
+    else{ch.forEach(m=>iBrass(s,bt,m,b*3.2,0.05));iBass(s,bt,root,b*3,0.18);iKick(s,bt,0.6);iCrash(s,bt,0.12);
+      for(let k=0;k<12;k++)iSnare(s,bt-b+k*b/12,0.03+k*0.01)}
+  });
+  setTimeout(()=>{if(song===s)musicStop(0.6)},(20*b+1.2)*1000);
+}
 function bingoOpen(){
   wasRunning=running;stopAuto();stopVoice();
   const o=$('bingo');o.classList.remove('won');o.classList.add('checking');$('bgSub').textContent='Checking the card…';$('bgRow1').hidden=false;$('bgRow2').hidden=true;
   chkBuild();
   o.hidden=false;o.querySelectorAll('.bgword b').forEach(b=>{b.style.animation='none';void b.offsetWidth;b.style.animation=''});
-  fanfare(false);confetti(90);
-  if(voiceOn())setTimeout(()=>say("Bingo! Let's check that card."),1400);
+  fanfare(false);confetti(90);tenseStart();
+  if(voiceOn())setTimeout(()=>{mDuck(true);say("Bingo! Let's check that card.").then(()=>mDuck(false))},1400);
   $('bingo').scrollTop=0;$('bgYes').focus({preventScroll:true});
 }
 $('bingoBtn').addEventListener('click',bingoOpen);
 $('pBingo').addEventListener('click',bingoOpen);
 $('bgNo').addEventListener('click',()=>{
-  $('bingo').hidden=true;
+  $('bingo').hidden=true;musicStop(0.3);
   if(voiceOn())say('No bingo yet. Keep playing!');
   if(wasRunning&&st.mode==='auto'&&st.every){running=true;setTimeout(countdown,voiceOn()?2200:0)}
 });
 $('bgYes').addEventListener('click',()=>{
   $('bingo').classList.remove('checking');$('bingo').classList.add('won');$('bgSub').textContent='We have a winner!';$('bgRow1').hidden=true;$('bgRow2').hidden=false;
-  fanfare(true);confetti(320);setTimeout(()=>confetti(220),900);
-  if(voiceOn())setTimeout(()=>say('We have a winner! Congratulations!'),1900);
+  musicStop(0.05);if(st.music===false)fanfare(true);else winnerSong();confetti(320);setTimeout(()=>confetti(220),900);
+  if(voiceOn())setTimeout(()=>{mDuck(true);say('We have a winner! Congratulations!').then(()=>mDuck(false))},1900);
   $('bgNext').focus();
 });
 $('bgClose').addEventListener('click',()=>{$('bingo').hidden=true});
-$('bgNext').addEventListener('click',()=>{$('bingo').hidden=true;newGame()});
+$('bgNext').addEventListener('click',()=>{$('bingo').hidden=true;musicStop(0.5);newGame()});
 // ---- past games
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 if(!Array.isArray(st.history))st.history=[];
