@@ -393,15 +393,6 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 <div class="proj" id="proj" hidden>
   <div class="pboard" id="pboard"></div>
   <aside class="pside">
-    <div class="pbrand"><svg class="plogo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs><clipPath id="bs-ball2"><circle cx="50" cy="45" r="38"/></clipPath></defs>
-  <path fill="#f0b400" d="M56 81C58 86 58 89 58 92a6 6 0 0 0 12 0v-8c0-3 1-5 2-8z"/>
-  <circle cx="50" cy="45" r="38" fill="#f0b400"/>
-  <circle cx="46" cy="41" r="37" fill="#ffd23f" clip-path="url(#bs-ball2)"/>
-  <ellipse cx="32" cy="22" rx="8" ry="5" fill="#fff" opacity=".65" transform="rotate(-35 32 22)"/>
-  <circle cx="50" cy="45" r="22" fill="#fff"/>
-  <text x="50" y="56" text-anchor="middle" font-family="Rubik, 'Arial Black', 'DejaVu Sans', sans-serif" font-weight="800" font-size="31" fill="#2f7fe0">B</text>
-</svg><span>Bingo Slop</span></div>
     <div class="pnow"><div id="pnow"></div><div class="tumb ptumb" id="tumbProj" hidden aria-hidden="true"><canvas></canvas></div></div>
     <div class="pmeta"><span id="pcount"></span><span id="pnext"></span></div>
     <button class="ppat" id="ppatBtn" aria-label="Change pattern"><div class="pgrid" id="pgrid"></div><b class="pptext" id="ppat"></b></button>
@@ -2563,7 +2554,7 @@ function tumbLoop(now){
 }
 requestAnimationFrame(tumbLoop);
 // ---- version label, and a quiet check for a newer published version
-const APP_VERSION='v1.44';
+const APP_VERSION='v1.45';
 $('ver').textContent=APP_VERSION;
 async function checkVersion(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();
   if(j&&j.v&&j.v!==APP_VERSION){const b=$('ver');b.classList.add('upd');b.textContent='Update available ('+String(j.v).slice(0,12)+') — tap to refresh';b.onclick=()=>location.reload()}}catch(e){}}
