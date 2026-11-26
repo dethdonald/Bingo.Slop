@@ -131,7 +131,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 /* ---- projector view: a hall flashboard on the felt, ball flies into its slot */
 .projbars{position:fixed;inset:0;z-index:19;background:#000}
 .projbars[hidden]{display:none!important}
-.proj{position:fixed;left:50%;top:50%;width:min(100vw,177.78vh);height:min(100vh,56.25vw);transform:translate(-50%,-50%);container-type:size;z-index:20;background:radial-gradient(120% 90% at 30% 0%,var(--felt) 0%,var(--felt2) 55%,var(--deep) 100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,29%);gap:2.4cqw;padding:max(2.6cqh,env(safe-area-inset-top)) max(2.4cqw,env(safe-area-inset-right)) max(2.6cqh,env(safe-area-inset-bottom)) max(2.4cqw,env(safe-area-inset-left));overflow:hidden;user-select:none;-webkit-user-select:none}
+.proj{--ar:1.7778;position:fixed;left:50%;top:50%;width:min(100vw,calc(100vh * var(--ar)));height:min(100vh,calc(100vw / var(--ar)));transform:translate(-50%,-50%);container-type:size;z-index:20;background:radial-gradient(120% 90% at 30% 0%,var(--felt) 0%,var(--felt2) 55%,var(--deep) 100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,29%);gap:2.4cqw;padding:max(2.6cqh,env(safe-area-inset-top)) max(2.4cqw,env(safe-area-inset-right)) max(2.6cqh,env(safe-area-inset-bottom)) max(2.4cqw,env(safe-area-inset-left));overflow:hidden;user-select:none;-webkit-user-select:none}
 .proj[hidden]{display:none!important}
 .pboard{display:grid;grid-template-rows:repeat(5,minmax(0,1fr));gap:1.2cqh;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:2cqh;padding:1.4cqh}
 .prow{display:grid;grid-template-columns:1.25fr repeat(15,minmax(0,1fr));gap:.6cqw}
@@ -336,6 +336,7 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
       <div class="panel" id="autoPanel">
         <button class="stoggle" id="stoggle" aria-expanded="false" aria-controls="sbody"><svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.3 2h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8c.1.6.1 1.2 0 1.8l2 1.8-1.7 2.9-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6c-.6-.2-1.2-.5-1.7-.9l-2.5.9-1.7-2.9 2-1.8a5.6 5.6 0 0 1 0-1.8l-2-1.8 1.7-2.9 2.5.9c.5-.4 1.1-.7 1.7-.9zM12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z" transform="translate(0 1.5)"/></svg><span>Settings</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="sbody" id="sbody"><div class="sinner" id="sinner">
+        <div class="field"><span>Projector screen shape</span><div class="chips" id="ratios"><button class="chip" data-r="16:9">16:9 TV</button><button class="chip" data-r="16:10">16:10</button><button class="chip" data-r="4:3">4:3</button><button class="chip" data-r="fill">Fill screen</button></div></div>
         <div class="field"><span>Theme</span><div class="chips" id="skins"><button class="chip" data-k="classic">Classic green</button><button class="chip" data-k="vegas">Darlene's Vegas</button></div></div>
         <p class="note vhint" id="vhint">Voice options appear here when you switch to Voice caller.</p>
         <div class="field vonly"><span>Call the next number by itself</span><div class="chips" id="every"></div></div>
@@ -438,7 +439,7 @@ const PATS=['Any line','Four corners','Letter X','Full card'];
 const EVERY=[0,10,15,20,30];
 const letter=n=>L[Math.floor((n-1)/15)];
 const KEY='bingo-slop-v1';
-let st={history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
+let st={ratio:'16:9',history:[],skin:'classic',setOpen:false,called:[],voice:false,pat:'Any line',mode:'manual',every:0,vname:'__studio',rate:0.85,twice:true,style:true,digits:true,chime:true,tick:true,cdSound:''};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.called))st=Object.assign(st,s)}catch(e){}
 if(!st.cdSound)st.cdSound=st.tick===false?'off':'tick';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
@@ -822,6 +823,14 @@ $('cdsnd').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)
 $('style').addEventListener('change',e=>{st.style=e.target.checked;save()});
 $('pats').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.pat=b.dataset.p;save();render(false)});
 [...$('sinner').children].forEach((c,i)=>c.style.setProperty('--i',i));
+const RATIOS={'16:9':16/9,'16:10':16/10,'4:3':4/3};
+function applyRatio(){
+  const p=$('proj'),r=RATIOS[st.ratio];
+  if(r){p.style.setProperty('--ar',r);p.style.width='';p.style.height=''}
+  else{p.style.width='100vw';p.style.height='100vh'}
+  document.querySelectorAll('#ratios .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===st.ratio));
+}
+$('ratios').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.ratio=b.dataset.r;save();applyRatio()});
 function applySkin(){
   const v=st.skin==='vegas';
   if(v)document.documentElement.dataset.skin='vegas';else delete document.documentElement.dataset.skin;
@@ -829,7 +838,7 @@ function applySkin(){
   document.querySelectorAll('#skins .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===st.skin));
 }
 $('skins').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.skin=b.dataset.k;save();applySkin()});
-applySkin();
+applySkin();applyRatio();
 function setOpen(o){st.setOpen=o;save();$('autoPanel').classList.toggle('open',o);$('stoggle').setAttribute('aria-expanded',o);$('sinner').inert=!o}
 $('stoggle').addEventListener('click',()=>setOpen(!st.setOpen));
 setOpen(!!st.setOpen);
