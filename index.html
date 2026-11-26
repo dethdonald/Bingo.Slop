@@ -1717,7 +1717,7 @@ Object.assign(WACKY,{
 // how close the camera gets for each gag (default 1.7x); machine-sized scenes get less
 // gags hidden when 'violent or edgy' is off
 const EDGY=new Set(['robber','cellar','shower','hallway','titanic','car']);
-const WZOOM={kaiju:1,trex:1,bridge:1,closet:1,shower:1.15,cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
+const WZOOM={presser:1,kaiju:1,trex:1,bridge:1,closet:1,shower:1.15,cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
 // ---- the epic: two balls on an ocean liner, three scenes, original sad song
 function linerPart(c,side,W,U,crackK){
   const deck=-U*15,keel=U*8,jag=[[0,deck],[U*1.5*crackK,deck+U*5],[-U*1.5*crackK,deck+U*11],[U*1*crackK,deck+U*17],[0,keel]];
@@ -2344,9 +2344,37 @@ WACKY.kaiju={dur:13.6,end(){try{$('wacky').style.filter=''}catch(e){}},draw(c,W,
   const v=c.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,W*.7);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.6)');c.fillStyle=v;c.fillRect(0,0,W,H);
   cues(this,t,[[.1,'rain'],[1.1,'shower'],[2.2,'rumble'],[3.3,'squawk'],[4.45,'spin'],[6.3,'siren2'],[6.5,'rumble'],[7.4,'boom'],[7.6,'squawk'],[7.75,'boom'],[8.1,'boom'],[8.45,'zap'],[8.5,'crash'],[9.75,'boing'],[9.9,'squawk'],[10.95,'spin']]);
 }};
+// ---- press conference: the Big Cheese ball loses his toupee (original character)
+function toupee(c,x,y,r,rot){c.save();c.translate(x,y);c.rotate(rot||0);
+  for(let i=0;i<9;i++){const a=Math.PI*(1.05+i*.11);circ(c,Math.cos(a)*r*.62,Math.sin(a)*r*.5,r*.26,i%2?'#4a2c17':'#5b3820')}
+  ell(c,0,-r*.22,r*.78,r*.32,'#5b3820');for(let i=0;i<6;i++){c.strokeStyle='#3a2210';c.lineWidth=r*.05;c.beginPath();c.arc(-r*.5+i*r*.2,-r*.25,r*.12,Math.PI,Math.PI*2);c.stroke()}c.restore()}
+WACKY.presser={dur:7.2,draw(c,W,H,t,b,n){const U=H/100,r=U*10,px=W*.5,py=H*.5;
+  c.fillStyle='#1d2a44';c.fillRect(0,0,W,H);for(let i=0;i<8;i++)rr(c,i*W/8,0,W/16,H,0,'rgba(255,255,255,.04)');
+  rr(c,px-U*18,H*.12,U*36,U*14,U*2,'#e8b931');c.fillStyle='#1d2a44';c.font=`900 ${U*4.2}px Rubik,sans-serif`;c.textAlign='center';c.fillText('BINGO HALL',px,H*.12+U*6);c.font=`700 ${U*2.6}px Rubik,sans-serif`;c.fillText('PRESS BRIEFING',px,H*.12+U*10.5);
+  // the Big Cheese behind the podium
+  const p=intro(t,b,px,py,r,.7),gone=t>5,flyU=seg(t,5,6.3);
+  drawBall(c,p.x,p.y+(t>2.4&&t<4.6?Math.sin(t*9)*U*.6:0),p.r,n,0);
+  if(t>.7&&!gone)toupee(c,px,py-r*.78,r,Math.sin(t*3)*.05+(t>4.6?Math.sin(t*30)*.12:0));
+  if(gone){toupee(c,lerp(px,W*1.15,easeIn(flyU)),lerp(py-r*.78,H*.1,flyU)-Math.sin(flyU*Math.PI)*H*.15,r,flyU*12);c.save();c.globalAlpha=.6;ell(c,px-r*.3,py-r*.62,r*.22,r*.1,'#fff');c.restore()}
+  rr(c,px-U*16,py+U*6,U*32,H,U*2,'#6b4423');rr(c,px-U*16,py+U*6,U*32,U*3,U*2,'#8a5a30');circ(c,px,py+U*18,U*5,'#e8b931');circ(c,px,py+U*18,U*3.4,'#6b4423');
+  [-14,-11,11,14].forEach((o,i)=>{const mx=px+o*U;ln(c,mx,py+U*6,mx+(o>0?U*1.5:-U*1.5),py+U*1.5,'#222',U*.5);rr(c,mx+(o>0?U*1.5:-U*1.5)-U*1.2,py-U*1,U*2.4,U*3,U*1,['#d1122f','#2f7fe0','#2fb35a','#ffd23f'][i])});
+  // reporter balls in the front row, waving notepads
+  [[.12,(n+17)%75+1],[.3,(n+38)%75+1],[.7,(n+51)%75+1],[.88,(n+64)%75+1]].forEach(([fx,num],i)=>{const m=num===69?70:num,x=W*fx,y=H*.9+Math.abs(Math.sin(t*6+i))*U*(t<4.4?1.5:0);drawBall(c,x,y,U*7.6,m,0);
+    if(t<4.4){c.save();c.translate(x+U*7,y-U*6);c.rotate(-.3+Math.sin(t*8+i)*.2);rr(c,-U*2,-U*3,U*4,U*5,U*.4,'#fff');for(let k=0;k<3;k++)ln(c,-U*1.4,-U*1.6+k*U*1.2,U*1.4,-U*1.6+k*U*1.2,'#9ab',1);c.restore()}});
+  // camera flashes
+  [1.0,1.35,1.9,2.2,2.7,3.3,3.6,5.2,5.4,5.8].forEach((f,i)=>{if(t>f&&t<f+.12){const fx=W*(.08+((i*37)%85)/100);c.save();c.shadowColor='#fff';c.shadowBlur=U*6;circ(c,fx,H*.72,U*2.5,'#fff');c.restore();c.fillStyle='rgba(255,255,255,.12)';c.fillRect(0,0,W,H)}});
+  if(t>1&&t<2.2)bubble(c,W*.14,H*.62,'Sir! Sir!',U*3);
+  if(t>1.6&&t<2.9)bubble(c,W*.72,H*.6,'Is B-7 next?!',U*3);
+  if(t>2.3&&t<3.4)bubble(c,W*.32,H*.66,'Any comment?!',U*3);
+  if(t>3.4&&t<4.9){c.save();c.translate(px,py-r-U*14);c.scale(1.35,1.35);bubble(c,0,0,'NO QUESTIONS! I CALL THE NUMBERS!',U*3);c.restore()}
+  if(t>4.6&&t<5.6)for(let i=0;i<6;i++){const u=((t*2+i*.17)%1);ln(c,-W*.1+u*W*1.2,H*(.15+i*.06),-W*.1+u*W*1.2+U*14,H*(.15+i*.06),`rgba(255,255,255,${.5*(1-Math.abs(u-.5)*2)})`,2)}
+  word(c,H,W*.78,H*.25,seg(t,5,6),'WHOOSH!','#9fe3ff');
+  if(t>6&&t<7.1)bubble(c,px,py-r-U*10,'...that was a hat.',U*3.2);
+  cues(this,t,[[1,'shutter'],[1.9,'shutter'],[2.7,'shutter'],[3.4,'thump'],[4.6,'wind'],[5,'whoosh'],[5.2,'shutter'],[5.4,'shutter'],[5.8,'shutter']]);
+}};
 SFXMAP.bridge=[];
 // ---- developer previews
-const GAGNAME={nice:'69 Nice!',titanic:'Ocean liner epic',hallway:'Hallway brawl',cellar:'Cellar game',shower:'Shower scene',closet:'Closet TV sighting',kaiju:'Monster from the bay',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
+const GAGNAME={nice:'69 Nice!',titanic:'Ocean liner epic',hallway:'Hallway brawl',cellar:'Cellar game',shower:'Shower scene',closet:'Closet TV sighting',kaiju:'Monster from the bay',presser:'Press conference',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
   slots:'Slot machine',roulette:'Roulette',blackjack:'Blackjack',dice:'Dice',fountain:'Fountain show',chapel:'Wedding chapel',saw:'Saw in half',fans:'Feather fans',flush:'Royal flush',limo:'Limo',neon:'Neon sign',lounge:'Lounge singer',wrecking:'Wrecking ball',ninja:'Ninja',pinball:'Pinball',dogfetch:'Dog fetch',
   boulder:'Boulder',ape:'Giant ape',slowmo:'Slow-mo',liner:'Ocean liner',trex:'Dino park night',moonbike:'Moon bike',sabers:'Laser swords',bridge:"Wizard's bridge",heist:'Heist',timejump:'Time jump',uphouse:'Balloon house',sharkstorm:'Shark storm'};
 let devBusy=false;
