@@ -1717,7 +1717,7 @@ Object.assign(WACKY,{
 // how close the camera gets for each gag (default 1.7x); machine-sized scenes get less
 // gags hidden when 'violent or edgy' is off
 const EDGY=new Set(['robber','cellar','shower','hallway','titanic','car']);
-const WZOOM={closet:1,shower:1.15,cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
+const WZOOM={trex:1,bridge:1,closet:1,shower:1.15,cellar:1,hallway:1.5,titanic:1.2,nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
 // ---- the epic: two balls on an ocean liner, three scenes, original sad song
 function linerPart(c,side,W,U,crackK){
   const deck=-U*15,keel=U*8,jag=[[0,deck],[U*1.5*crackK,deck+U*5],[-U*1.5*crackK,deck+U*11],[U*1*crackK,deck+U*17],[0,keel]];
@@ -1970,10 +1970,120 @@ WACKY.closet={dur:11.6,draw(c,W,H,t,b,n){const U=H/100,r=U*9;
   if(t>10&&t<11.4)bubble(c,cx0-U*12,cy0-r-U*12,"I'm sleeping in here tonight.",U*3);
   cues(this,t,[[.4,'hum'],[2.6,'static'],[5.2,'whoosh'],[7.85,'boom'],[8,'screech'],[9.8,'static']]);
 }};
+// ---- epic remakes: dino park night (T-rex) and the bridge in the deep (wizard)
+SFX4.roar=(a,t)=>{const o=sfxTone(a,t,'sawtooth',140,60,1.6,.22);const l=a.createOscillator(),lg=a.createGain();l.frequency.value=28;lg.gain.value=30;l.connect(lg);lg.connect(o.frequency);l.start(t);l.stop(t+1.65);sfxNoise(a,t,1.6,'bandpass',700,250,.45,.8)};
+SFX4.rain=(a,t)=>{sfxNoise(a,t,4,'highpass',5000,4000,.07)};
+SFX4.zing=(a,t)=>{sfxTone(a,t,'sine',1200,3200,.5,.12);sfxNoise(a,t,.6,'highpass',4000,8000,.15)};
+function rexHead(c,x,y,s,open,eye){c.save();c.translate(x,y);
+  poly(c,[[-s*1.2,-s*.2],[s*.2,-s*.65],[s*1.25,-s*.45],[s*1.4,-s*.05],[s*.2,0],[-s*1.2,s*.2]],'#4d5b3c');
+  c.save();c.rotate(open*.5);poly(c,[[-s*.2,s*.05],[s*1.25,s*.05],[s*1.15,s*.38],[-s*.2,s*.4]],'#43502f');for(let i=0;i<7;i++)poly(c,[[s*.05+i*s*.16,s*.06],[s*.13+i*s*.16,s*.06],[s*.09+i*s*.16,s*-.07]],'#f2f0dc');c.restore();
+  for(let i=0;i<8;i++)poly(c,[[-s*.05+i*s*.17,-s*.02],[s*.04+i*s*.17,-s*.02],[0+i*s*.17,s*.12]],'#f2f0dc');
+  ell(c,s*.15,-s*.42,s*.11,s*.07,'#e8b931');ell(c,s*.15,-s*.42,s*.025,s*.065,'#111');if(eye)ell(c,s*.15,-s*.42,s*.11,s*.07*(1-eye),'#4d5b3c');
+  ln(c,-s*.1,-s*.55,s*.6,-s*.6,'rgba(0,0,0,.25)',s*.04);c.restore()}
+function rexBody(c,x,y,s,t,run){c.save();c.translate(x,y);const st=Math.sin(t*(run?10:3));
+  poly(c,[[-s*2.6,-s*1.6],[-s*.4,-s*2.4],[s*.4,-s*2.6],[s*.6,-s*1.5],[-s*.2,-s*1],[-s*2.4,-s*1.3]],'#4d5b3c');
+  ln(c,-s*.6,-s*1.3,-s*.8+st*s*.3,0,'#43502f',s*.32);ln(c,-s*1.2,-s*1.3,-s*1.1-st*s*.3,0,'#3d4a2b',s*.3);ln(c,s*.3,-s*2.1,s*.6,-s*1.8,'#43502f',s*.08);c.restore()}
+function jeep(c,x,y,s,t){c.save();c.translate(x,y);rr(c,-s*1.4,-s*.7,s*2.8,s*.55,s*.12,'#e8ecef');rr(c,-s*1.4,-s*.36,s*2.8,s*.1,0,'#c8102e');rr(c,-s*1.35,-s*.95,s*.5,s*.25,s*.05,'#e8ecef');
+  ln(c,-s*.4,-s*.7,-s*.25,-s*1.25,'#555',s*.06);ln(c,s*.2,-s*.7,s*.1,-s*1.25,'#555',s*.06);ln(c,-s*.25,-s*1.25,s*.1,-s*1.25,'#555',s*.06);
+  [-s*.85,s*.9].forEach(wx=>{circ(c,wx,-s*.12,s*.3,'#151515');circ(c,wx,-s*.12,s*.13,'#888')});circ(c,s*1.42,-s*.5,s*.09,'#fff6c8');c.restore()}
+function rainFx(c,W,H,t){c.strokeStyle='rgba(170,190,220,.45)';c.lineWidth=1.5;c.beginPath();for(let i=0;i<70;i++){const x=((i*97)%W+t*160)%W,y=((i*53)%H+t*900)%H;c.moveTo(x,y);c.lineTo(x-6,y+18)}c.stroke()}
+WACKY.trex={dur:13,draw(c,W,H,t,b,n){const U=H/100,r=U*7,road=H*.86,n2=(()=>{let m=(n+44)%75+1;return m===69?70:m})();
+  const flash=[1.1,5.2,9.4].some(f=>t>f&&t<f+.08);
+  const black=a=>{if(a>0){c.fillStyle=`rgba(0,0,0,${Math.min(1,a)})`;c.fillRect(0,0,W,H)}};
+  const stomps=[1.6,2.3,2.9,3.4,3.85];
+  if(t<4.3){ // SCENE 1: stormy night, stalled at the fence; the cup ripples
+    const close=t>1.4&&t<4;
+    if(!close){c.fillStyle='#0b1220';c.fillRect(0,0,W,H);c.fillStyle='#14201a';c.fillRect(0,road-U*10,W,H);
+      for(let i=0;i<9;i++)ln(c,W*(.45+i*.065),road-U*10,W*(.45+i*.065),H*.12,'#7a7f87',U*.7);for(let k=0;k<6;k++)ln(c,W*.45,H*(.18+k*.1),W,H*(.18+k*.1),'#9aa',1.2);
+      rr(c,W*.5,H*.45,U*16,U*9,U*1,'#e8b931');c.fillStyle='#111';c.font=`900 ${U*2.6}px Rubik,sans-serif`;c.textAlign='center';c.fillText('DANGER',W*.5+U*8,H*.45+U*4);c.fillText('HIGH VOLTAGE',W*.5+U*8,H*.45+U*7.5);
+      jeep(c,W*.25,road,U*14,t);const p=intro(t,b,W*.25-U*4,road-U*14-r*.4,r,.8);drawBall(c,p.x,p.y,p.r,n,0);drawBall(c,W*.25+U*8,road-U*14-r*.4,r,n2,0);
+      if(t<1.4&&t>.9)bubble(c,W*.25,road-U*40,'Why did we stop?',U*3)}
+    else{c.fillStyle='#10141c';c.fillRect(0,0,W,H);rr(c,0,H*.62,W,H*.4,0,'#2a2a2a');
+      const cx=W*.5,cy=H*.48;poly(c,[[cx-U*14,cy-U*16],[cx+U*14,cy-U*16],[cx+U*11,cy+U*16],[cx-U*11,cy+U*16]],'rgba(220,235,255,.35)');ell(c,cx,cy-U*8,U*13.4,U*2.6,'rgba(120,170,230,.6)');
+      stomps.forEach(s0=>{const u=seg(t,s0,s0+.7);if(u>0&&u<1)for(let k=0;k<3;k++){c.strokeStyle=`rgba(255,255,255,${.8*(1-u)})`;c.lineWidth=2;c.beginPath();c.ellipse(cx,cy-U*8,U*12*Math.min(1,u*1.6+k*.2),U*2.3*Math.min(1,u*1.6+k*.2),0,0,6.283);c.stroke()}});
+      c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=2;c.strokeRect(cx-U*14,cy-U*16,U*28,U*32);
+      const p=intro(t,b,W*.82,H*.5,r,.8);drawBall(c,t<1.4?p.x:W*.82+(stomps.some(s0=>t>s0&&t<s0+.15)?U*.6:0),H*.5,r,n,0);if(t>3)bubble(c,W*.82,H*.5-r-U*10,'...uh oh.',U*3)}
+    if(stomps.some(s0=>t>s0&&t<s0+.12))c.translate((Math.random()-.5)*U*1.5,0);
+    rainFx(c,W,H,t);if(flash){c.fillStyle='rgba(255,255,255,.6)';c.fillRect(0,0,W,H)}black(seg(t,4,4.3));
+  }else if(t<8.6){ // SCENE 2: it comes through the fence; don't shine the light!
+    c.fillStyle='#0b1220';c.fillRect(0,0,W,H);c.fillStyle='#14201a';c.fillRect(0,road-U*10,W,H);
+    const brk=seg(t,4.8,5.3);for(let i=0;i<9;i++){const x=W*(.45+i*.065),bend=i>=3&&i<=5?brk*U*14:0;ln(c,x,road-U*10,x+bend*.4,H*.12+bend,'#7a7f87',U*.7)}
+    for(let k=0;k<6;k++){if(brk>0&&k>1){ln(c,W*.45,H*(.18+k*.1),W*.62,H*(.18+k*.1)+brk*U*10,'#9aa',1.2);ln(c,W*.8,H*(.18+k*.1)+brk*U*10,W,H*(.18+k*.1),'#9aa',1.2)}else ln(c,W*.45,H*(.18+k*.1),W,H*(.18+k*.1),'#9aa',1.2)}
+    const hx=lerp(W*.95,W*.62,easeOut(seg(t,4.6,5.6))),hy=H*.36+Math.sin(t*2)*U*1.5,roar=t>5.8&&t<7.2?Math.min(1,seg(t,5.8,6.1)):0,look=t>7.2?seg(t,7.2,7.6):0;
+    rexBody(c,hx+U*30,road,U*16,t,false);rexHead(c,hx-look*U*6,hy+look*U*10,U*14,roar*.9,0);
+    if(roar>0)for(let i=0;i<10;i++){const u=((t*2+i*.1)%1);circ(c,hx-U*16-u*U*30,hy+U*2+(i-5)*U*2*u,U*.6,`rgba(220,230,255,${.6*(1-u)})`)}
+    jeep(c,W*.25,road,U*14,t);drawBall(c,W*.25-U*4,road-U*14-r*.4+(roar?Math.sin(t*50)*U*.4:0),r,n,0);drawBall(c,W*.25+U*8,road-U*14-r*.4,r,n2,0);
+    if(t>6.8){const g=c.createLinearGradient(W*.25+U*12,0,W*.62,0);g.addColorStop(0,'rgba(255,250,200,.7)');g.addColorStop(1,'rgba(255,250,200,0)');poly(c,[[W*.25+U*12,road-U*16],[hx,hy-U*8],[hx,hy+U*8]],g);rr(c,W*.25+U*11,road-U*17,U*3,U*1.6,U*.4,'#333')}
+    word(c,H,W*.5,H*.14,seg(t,5.8,7),'ROOOAR!');if(t>7.2&&t<8.4)bubble(c,W*.25-U*4,road-U*40,'TURN OFF THE LIGHT!',U*3.2);
+    rainFx(c,W,H,t);if(flash){c.fillStyle='rgba(255,255,255,.6)';c.fillRect(0,0,W,H)}black(1-seg(t,4.3,4.6));black(seg(t,8.3,8.6));
+  }else{ // SCENE 3: the chase, with a rear-view mirror
+    c.fillStyle='#0d1626';c.fillRect(0,0,W,H);c.fillStyle='#3b2f22';c.fillRect(0,road-U*4,W,H);for(let i=0;i<12;i++){const x=((i*W/6)-t*W*.6)%(W*2)+W*.5;circ(c,x,road-U*16,U*10,'#18301c')}
+    const jx=W*.3+Math.sin(t*3)*U*2,rx=lerp(W*1.25,W*.62,easeOut(seg(t,8.7,10)))-easeIn(seg(t,11.4,12.6))*-W*.5;
+    rexBody(c,rx+U*20,road,U*14,t,true);rexHead(c,rx-U*14,road-U*42,U*12,.4+Math.sin(t*8)*.3,0);
+    jeep(c,jx,road,U*14,t);drawBall(c,jx-U*4,road-U*14-r*.4,r,n,0);drawBall(c,jx+U*8,road-U*14-r*.4,r,n2,0);
+    if(t>9.4&&t<11.6){const mx=W*.78,my=H*.25;rr(c,mx-U*14,my-U*8,U*28,U*16,U*4,'#222');c.save();c.beginPath();c.roundRect(mx-U*13,my-U*7,U*26,U*14,U*3.5);c.clip();c.fillStyle='#1b2738';c.fillRect(mx-U*13,my-U*7,U*26,U*14);rexHead(c,mx+U*2,my+U*2,U*9,.5+Math.sin(t*8)*.2,0);c.restore();
+      c.fillStyle='#fff';c.font=`700 ${U*2}px Rubik,sans-serif`;c.textAlign='center';c.fillText('DINO MAY BE CLOSER THAN IT APPEARS',mx,my+U*11)}
+    if(t>8.9&&t<10)bubble(c,jx,road-U*40,'FLOOR IT!!',U*3.4);word(c,H,W*.5,H*.14,seg(t,11.6,12.8),'ESCAPED!','#ffd23f');
+    rainFx(c,W,H,t);if(flash){c.fillStyle='rgba(255,255,255,.6)';c.fillRect(0,0,W,H)}black(1-seg(t,8.6,8.9));black(seg(t,12.6,13));
+  }
+  stomps.forEach((s0,i)=>{if(t>=s0&&!this['s'+i]){this['s'+i]=1;sfx('thump')}});
+  cues(this,t,[[.2,'rain'],[1.1,'thunder'],[4.4,'rain'],[4.9,'crash'],[5.8,'roar'],[8.7,'rumble'],[9.4,'roar'],[11.6,'roar']]);
+}};
+function wizard(c,x,y,s,staffA,glow){c.save();c.translate(x,y);
+  poly(c,[[-s*.35,0],[s*.35,0],[s*.2,-s*1.05],[-s*.2,-s*1.05]],'#8b9096');circ(c,0,-s*1.2,s*.19,'#f1c27d');poly(c,[[-s*.16,-s*1.16],[s*.16,-s*1.16],[s*.02,-s*.6]],'#eeeeee');
+  poly(c,[[-s*.42,-s*1.28],[s*.42,-s*1.28],[s*.08,-s*1.95]],'#7d8288');
+  const ex=s*.5+Math.cos(staffA)*s*.9,ey=-s*.9+Math.sin(staffA)*s*.9;ln(c,s*.2,-s*.9,s*.5,-s*.9,'#8b9096',s*.12);ln(c,s*.5-Math.cos(staffA)*s*.3,-s*.9-Math.sin(staffA)*s*.3,ex,ey,'#6b4a2a',s*.07);
+  c.save();c.shadowColor='#fff';c.shadowBlur=s*.4*glow;circ(c,ex,ey,s*.09*(1+glow),'#fffbe8');c.restore();c.restore()}
+function lavaBeast(c,x,y,s,t,rise){c.save();c.translate(x,y);
+  for(let i=0;i<12;i++){const a=-Math.PI*(i/11),fl=Math.sin(t*12+i)*s*.08;poly(c,[[Math.cos(a)*s*.7,-s*1.6+Math.sin(a)*s*.5],[Math.cos(a)*s*1.1+fl,-s*1.6+Math.sin(a)*s*1.2-s*.3],[Math.cos(a+.2)*s*.7,-s*1.6+Math.sin(a+.2)*s*.5]],i%2?'#ff7a1a':'#ffb400')}
+  poly(c,[[-s*.9,0],[s*.9,0],[s*.7,-s*1.2],[s*.4,-s*1.9],[-s*.4,-s*1.9],[-s*.7,-s*1.2]],'#2b1a14');
+  c.strokeStyle='#ff7a1a';c.lineWidth=s*.04;c.shadowColor='#ff5a00';c.shadowBlur=s*.3;[[-.5,-.3,-.2,-1],[.3,-.2,.5,-1.1],[-.1,-1.2,.2,-1.7]].forEach(([a,b2,c2,d])=>{c.beginPath();c.moveTo(a*s,b2*s);c.lineTo((a+c2)/2*s+s*.1,(b2+d)/2*s);c.lineTo(c2*s,d*s);c.stroke()});c.shadowBlur=0;
+  poly(c,[[-s*.35,-s*1.85],[-s*.75,-s*2.4],[-s*.2,-s*1.95]],'#1a100c');poly(c,[[s*.35,-s*1.85],[s*.75,-s*2.4],[s*.2,-s*1.95]],'#1a100c');
+  ell(c,-s*.16,-s*1.62,s*.08,s*.05,'#ffd23f');ell(c,s*.16,-s*1.62,s*.08,s*.05,'#ffd23f');
+  ln(c,-s*.8,-s*1.2,-s*1.4,-s*.6+Math.sin(t*3)*s*.2,'#2b1a14',s*.2);ln(c,s*.8,-s*1.2,s*1.4,-s*.6-Math.sin(t*3)*s*.2,'#2b1a14',s*.2);c.restore()}
+WACKY.bridge={dur:13.5,draw(c,W,H,t,b,n){const U=H/100,r=U*5.5,deck=H*.6,L=W*.12,R=W*.88,mid=W*.5,others=[(n+9)%75+1,(n+30)%75+1].map(m=>m===69?70:m);
+  const black=a=>{if(a>0){c.fillStyle=`rgba(0,0,0,${Math.min(1,a)})`;c.fillRect(0,0,W,H)}};
+  // the deep: pillars, an abyss glowing below
+  c.fillStyle='#0c0a10';c.fillRect(0,0,W,H);for(let i=0;i<7;i++)rr(c,W*(.02+i*.16),0,U*7,H,0,'#16131c');
+  const g=c.createLinearGradient(0,deck,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(255,90,20,${.55+.15*Math.sin(t*4)})`);c.fillStyle=g;c.fillRect(0,deck,W,H);
+  rr(c,0,deck-U*1,L+U*2,H,0,'#2a2530');rr(c,R-U*2,deck-U*1,W,H,0,'#2a2530');
+  const crack=seg(t,7.2,7.5),fall=easeIn(seg(t,7.5,9));
+  // the narrow bridge, in three parts; the middle collapses
+  rr(c,L,deck,mid-U*10-L,U*2.6,0,'#4a4552');rr(c,mid+U*10,deck,R-mid-U*10,U*2.6,0,'#4a4552');
+  c.save();c.translate(mid,deck+fall*H*.6);c.rotate(fall*.7);rr(c,-U*10,0,U*20,U*2.6,0,'#4a4552');c.restore();
+  if(crack>0){ln(c,mid-U*10,deck,mid-U*9,deck+U*2.6,'#000',2);ln(c,mid+U*10,deck,mid+U*9,deck+U*2.6,'#000',2)}
+  // the beast
+  const by=t<3.4?H*1.3:lerp(H*1.3,deck+U*1,easeOut(seg(t,3.4,4.8)))+fall*H*.9-(t>4.8&&t<7.5?Math.sin(t*2)*U:0);
+  if(t>3.3)lavaBeast(c,mid+U*14,by,U*16,t);
+  // the wizard
+  let wx,wy=deck,sa=-1.3,glow=0;
+  if(t<3.6)wx=lerp(L+U*4,mid-U*12,easeIO(seg(t,.4,3.6)));else if(t<5.4)wx=lerp(mid-U*12,mid-U*2,easeIO(seg(t,3.6,4.4)));else wx=mid-U*2;
+  if(t>5.4&&t<7.2){sa=-1.57;glow=.6+.4*Math.sin(t*10)}
+  if(t>6.8&&t<7.6)sa=lerp(-1.57,-.4,seg(t,6.8,7.1));
+  let wf=0;if(t>9.6){wf=easeIn(seg(t,11.2,12.2))*H*.9}
+  if(t>9){const hangX=mid-U*11;wx=hangX;wy=deck+U*16+wf;c.save();c.strokeStyle='#ff7a1a';c.lineWidth=U*.8;c.beginPath();c.moveTo(hangX,deck+U*14+wf);c.quadraticCurveTo(hangX+U*8,deck+U*40,mid+U*14,by-U*20);c.stroke();c.restore();
+    if(t<11.2){ln(c,hangX,deck+U*2,hangX,deck+U*10,'#f1c27d',U*.8);}}
+  if(t<12.3)wizard(c,wx,wy,U*22,sa,glow);
+  if(t>5.4&&t<7.4){c.save();c.globalAlpha=.25+.15*Math.sin(t*10);circ(c,wx+U*8,deck-U*14,U*14,'#fffbe8');c.restore()}
+  // the balls: run across, then stop to watch from the far side
+  const runK=easeIO(seg(t,.4,4.2)),side=R-U*22;
+  [[n,0],[others[0],1],[others[1],2]].forEach(([num,i])=>{const x=t<4.2?lerp(L-U*6-i*U*9,side+i*U*9,runK)+(t<4.2?Math.sin(t*14+i)*U*.5:0):side+i*U*9;const y=(x>L&&x<R?deck:deck-U*1)-r;
+    if(num===n&&t<.8){const p=intro(t,b,x,y,r,.8);drawBall(c,p.x,p.y,p.r,n,0)}else drawBall(c,x,y,r,num,0)});
+  if(t>1&&t<3.2)bubble(c,mid-U*10,deck-U*34,'Over the bridge! Roll!',U*3);
+  if(t>5.5&&t<7.2)bubble(c,mid-U*4,deck-U*38,'THIS BRIDGE... IS CLOSED!',U*3.4);
+  if(t>7.1&&t<7.4){c.fillStyle='rgba(255,255,255,.7)';c.fillRect(0,0,W,H)}
+  word(c,H,W*.5,H*.14,seg(t,7.2,8.2),'KA-BOOM!','#fffbe8');
+  if(t>9.3&&t<11.1)bubble(c,mid-U*6,deck-U*8,'Keep rolling, you bingo balls!',U*3);
+  if(t>11.3&&t<12.9)bubble(c,side,deck-U*22,'WIZAAAARD!',U*3.6);
+  black(1-seg(t,0,.4));black(seg(t,13,13.5));
+  [0.6,1.2,1.8,2.4,3.0,3.6].forEach((d,i)=>{if(t>=d&&!this['d'+i]){this['d'+i]=1;sfx('thump')}});
+  cues(this,t,[[3.4,'rumble'],[4.4,'roar'],[5.4,'zing'],[7.1,'boom'],[7.2,'crash'],[9,'whoosh'],[11.2,'whoosh']]);
+}};
+SFXMAP.bridge=[];
 // ---- developer previews
 const GAGNAME={nice:'69 Nice!',titanic:'Ocean liner epic',hallway:'Hallway brawl',cellar:'Cellar game',shower:'Shower scene',closet:'Closet TV sighting',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
   slots:'Slot machine',roulette:'Roulette',blackjack:'Blackjack',dice:'Dice',fountain:'Fountain show',chapel:'Wedding chapel',saw:'Saw in half',fans:'Feather fans',flush:'Royal flush',limo:'Limo',neon:'Neon sign',lounge:'Lounge singer',wrecking:'Wrecking ball',ninja:'Ninja',pinball:'Pinball',dogfetch:'Dog fetch',
-  boulder:'Boulder',ape:'Giant ape',slowmo:'Slow-mo',liner:'Ocean liner',trex:'T-rex',moonbike:'Moon bike',sabers:'Laser swords',bridge:"Wizard's bridge",heist:'Heist',timejump:'Time jump',uphouse:'Balloon house',sharkstorm:'Shark storm'};
+  boulder:'Boulder',ape:'Giant ape',slowmo:'Slow-mo',liner:'Ocean liner',trex:'Dino park night',moonbike:'Moon bike',sabers:'Laser swords',bridge:"Wizard's bridge",heist:'Heist',timejump:'Time jump',uphouse:'Balloon house',sharkstorm:'Shark storm'};
 let devBusy=false;
 async function devPreview(key){
   if(devBusy)return false;devBusy=true;
