@@ -127,6 +127,11 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
 .cell.on{background:var(--c);color:var(--t,#fff);font-weight:800}
 .cell.last{outline:3px solid var(--gold);outline-offset:1px}
 .note{color:var(--soft);font-size:15px;margin:10px 2px 0}
+.dev{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line)}
+.devbtn{width:100%}
+.devrow{display:flex;gap:8px;margin:10px 0}
+.devgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.devgrid .chip{border-radius:10px;font-size:15px;min-height:42px;padding:0 8px}
 .vstat{margin:14px 0 0;padding:10px 12px;border-radius:12px;background:rgba(255,210,63,.14);font-weight:700;font-size:16px}
 /* ---- projector view: a hall flashboard on the felt, ball flies into its slot */
 .projbars{position:fixed;inset:0;z-index:19;background:#000}
@@ -359,6 +364,13 @@ input[type=range]{width:100%;height:44px;accent-color:var(--gold)}
         </div>
         <p class="vstat vonly" id="vstat" role="status">Tap Test speaker to check the sound.</p>
         <p class="note vonly">Connect your phone to the Bluetooth speaker first. The voice plays through whatever your phone uses for sound. No sound on an iPhone? Turn off silent mode and turn the volume up.</p>
+        <div class="dev"><button class="btn devbtn" id="devBtn" aria-expanded="false">Developer: preview animations</button>
+          <div id="devBody" hidden>
+            <p class="note">Plays in the projector view with a random demo number. Your game isn't changed. Tap × to stop.</p>
+            <div class="devrow"><button class="chip" id="devRandom">Random gag</button><button class="chip" id="devAll">Play all</button></div>
+            <div class="devgrid" id="devGrid"></div>
+          </div>
+        </div>
         </div></div>
       </div>
 
@@ -1700,6 +1712,31 @@ Object.assign(WACKY,{
 });
 // how close the camera gets for each gag (default 1.7x); machine-sized scenes get less
 const WZOOM={nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
+// ---- developer previews
+const GAGNAME={nice:'69 Nice!',boat:'Boat',car:'Car crash',ufo:'UFO',rocket:'Rocket',dunk:'Slam dunk',golf:'Hole in one',eagle:'Eagle',cannon:'Cannon',balloon:'Hot air balloon',jaws:'Shark (Jaws)',magic:'Magic hat',trampoline:'Trampoline',bowling:'Bowling',frog:'Frog',wrestler:'Wrestler',robber:'Robber',bees:'Bees',
+  slots:'Slot machine',roulette:'Roulette',blackjack:'Blackjack',dice:'Dice',fountain:'Fountain show',chapel:'Wedding chapel',saw:'Saw in half',fans:'Feather fans',flush:'Royal flush',limo:'Limo',neon:'Neon sign',lounge:'Lounge singer',wrecking:'Wrecking ball',ninja:'Ninja',pinball:'Pinball',dogfetch:'Dog fetch',
+  boulder:'Boulder',ape:'Giant ape',slowmo:'Slow-mo',liner:'Ocean liner',trex:'T-rex',moonbike:'Moon bike',sabers:'Laser swords',bridge:"Wizard's bridge",heist:'Heist',timejump:'Time jump',uphouse:'Balloon house',sharkstorm:'Shark storm'};
+let devBusy=false;
+async function devPreview(key){
+  if(devBusy)return false;devBusy=true;
+  if(!projOpen)openProj();await wait(350);
+  if(!projOpen){devBusy=false;return false}
+  const n=key==='nice'?69:1+((Math.random()*75)|0),fly=$('fly');
+  fly.getAnimations().forEach(a=>a.cancel());fly.innerHTML=bb(n);fly.style.transform='translate(-50%,-50%)';fly.style.display='block';
+  pending=n;
+  if(!reduce){const en=enterFrames('translate(-50%,-50%) ');fly.animate(en.f,{duration:en.d,easing:en.e,fill:'forwards'});await wait(en.d+500)}
+  if(pending===n&&projOpen)await wackyPlay(n,key);
+  fly.style.display='none';if(pending===n)pending=0;devBusy=false;
+  if(projOpen)projRender();
+  return projOpen;
+}
+function devBuild(){
+  $('devGrid').innerHTML=['nice'].concat(Object.keys(WACKY).filter(k=>k!=='nice')).map(k=>`<button class="chip" data-g="${k}">${esc(GAGNAME[k]||k)}</button>`).join('');
+}
+$('devBtn').addEventListener('click',()=>{const o=$('devBody').hidden;$('devBody').hidden=!o;$('devBtn').setAttribute('aria-expanded',o);if(o)devBuild()});
+$('devGrid').addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(b)devPreview(b.dataset.g)});
+$('devRandom').addEventListener('click',()=>devPreview(pick(Object.keys(WACKY).filter(k=>k!=='nice'))));
+$('devAll').addEventListener('click',async()=>{for(const k of Object.keys(WACKY).filter(k=>k!=='nice')){if(!(await devPreview(k)))break;await wait(400)}});
 function wackyPlay(n,keyName){
   return new Promise(res=>{
     const keys=Object.keys(WACKY).filter(k=>k!==lastWacky&&k!=='nice'),key=keyName||(WACKY[window.__forceWacky]?window.__forceWacky:pick(keys)),sc=WACKY[key],S={},S2={},{cv,ctx,W,H}=wackyCanvas();lastWacky=key;
