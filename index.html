@@ -908,7 +908,17 @@ function wackyCanvas(){
   return {cv,ctx,W,H};
 }
 function cssv(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+let WTRACK=null,CAM=null;
 function drawBall(ctx,x,y,r,n,rot){
+  if(WTRACK&&CAM&&n===WTRACK.n){
+    // keep the called ball big enough to read; still let it shrink away when a gag makes it vanish
+    const minR=CAM.H*.075/CAM.z,thr=CAM.H*.025;r=r>=thr?Math.max(r,minR):r*(minR/thr);
+    rot=0; // number always upright so 6/9, 68/89 can't be misread
+  }
+  if(WTRACK&&CAM&&n===WTRACK.n&&!WTRACK.got){
+    // where the ball really is on screen (scenes may draw it inside their own transforms), back in scene units
+    const m=ctx.getTransform(),px=(m.a*x+m.c*y+m.e)/CAM.dpr,py=(m.b*x+m.d*y+m.f)/CAM.dpr;
+    WTRACK.got=1;WTRACK.x=CAM.cx+(px-CAM.W/2)/CAM.z;WTRACK.y=CAM.cy+(py-CAM.H/2)/CAM.z}
   const l=letter(n),c=cssv('--'+l)||'#888';
   ctx.save();ctx.translate(x,y);ctx.rotate(rot||0);
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.arc(r*.06,r*.1,r,0,6.28);ctx.fill();
@@ -1008,7 +1018,9 @@ function ln(c,x1,y1,x2,y2,col,w){c.strokeStyle=col;c.lineWidth=w;c.lineCap='roun
 // big ball shrinks and moves to a spot during the first d seconds
 function intro(t,b,x,y,r2,d){const k=easeIO(seg(t,0,d||.6));return {x:lerp(b.x,x,k),y:lerp(b.y,y,k),r:lerp(b.r,r2,k)}}
 const popS=u=>u<.15?u/.15*1.12:1+.04*Math.sin(u*25);
-function word(c,H,x,y,u,text,col){if(u<=0||u>=1)return;comicWord(c,x,y,popS(u)*H/720*.55,text,col)}
+function word(c,H,x,y,u,text,col){if(u<=0||u>=1)return;
+  if(CAM&&CAM.z>1.01){x=CAM.cx+(x-CAM.W/2)/CAM.z;y=CAM.cy+(y-CAM.H/2)/CAM.z;comicWord(c,x,y,popS(u)*H/720*.55/CAM.z*1.2,text,col)}
+  else comicWord(c,x,y,popS(u)*H/720*.55,text,col)}
 function puffs(c,x,y,u,n,size,col){for(let i=0;i<n;i++){const a=i/n*6.283+i,d=size*u*(1+(i%3)*.4);circ(c,x+Math.cos(a)*d,y+Math.sin(a)*d*.6-u*size*.5,size*.35*(1+u*1.4),`rgba(${col||'220,220,220'},${(1-u)*.85})`)}}
 function bubble(c,x,y,text,sz){c.save();c.font=`900 ${sz}px Rubik,sans-serif`;const w=c.measureText(text).width+sz;
   rr(c,x-w/2,y-sz*1.1,w,sz*1.8,sz*.5,'#fff');c.strokeStyle='#000';c.lineWidth=3;c.stroke();
@@ -1686,17 +1698,26 @@ Object.assign(WACKY,{
     word(c,H,W*.3,H*.2,seg(t,2,3.3),'SHARK STORM!','#9fe3ff');cues(this,t,[[.35,'wind'],[1,'thunder'],[2.2,'wind'],[2.8,'thunder']]);
   }}
 });
+// how close the camera gets for each gag (default 1.7x); machine-sized scenes get less
+const WZOOM={nice:1,slots:1.25,roulette:1.3,pinball:1.3,neon:1.3,fountain:1.4,ape:1.45,uphouse:1.5,sharkstorm:1.45,liner:1.5};
 function wackyPlay(n,keyName){
   return new Promise(res=>{
     const keys=Object.keys(WACKY).filter(k=>k!==lastWacky&&k!=='nice'),key=keyName||(WACKY[window.__forceWacky]?window.__forceWacky:pick(keys)),sc=WACKY[key],S={},S2={},{cv,ctx,W,H}=wackyCanvas();lastWacky=key;
     const fr=$('fly').firstElementChild.getBoundingClientRect(),pr=$('proj').getBoundingClientRect();
     const b={x:fr.left-pr.left+fr.width/2,y:fr.top-pr.top+fr.height/2,r:fr.width/2};
     $('fly').style.display='none';
-    const t0=performance.now();
+    const t0=performance.now(),Z=WZOOM[key]||1.7;
+    let camX=b.x,camY=b.y,lastT=0;WTRACK={n,x:b.x,y:b.y,got:0};
     const frame=now=>{
-      const t=(now-t0)/1000;
-      if(pending!==n||!projOpen||t>sc.dur){ctx.clearRect(0,0,W,H);cv.style.display='none';res();return}
-      ctx.clearRect(0,0,W,H);ctx.save();try{sc.draw.call(S,ctx,W,H,t,b,n)}catch(e){console.error('wacky',key,e)}ctx.restore();if(SFXMAP[key])cues(S2,t,SFXMAP[key]);requestAnimationFrame(frame);
+      const t=(now-t0)/1000,dt=Math.min(.05,t-lastT);lastT=t;
+      if(pending!==n||!projOpen||t>sc.dur){ctx.clearRect(0,0,W,H);cv.style.display='none';WTRACK=null;CAM=null;res();return}
+      // camera: ease in to a close-up and smoothly follow the ball, never showing past the edges
+      const z=1+(Z-1)*easeIO(seg(t,0,.8)),k=Math.min(1,dt*4.5);
+      camX+=(WTRACK.x-camX)*k;camY+=(WTRACK.y-camY)*k;
+      const hw=W/2/z,hh=H/2/z,cx=Math.min(W-hw,Math.max(hw,camX)),cy=Math.min(H-hh,Math.max(hh,camY));
+      CAM={cx,cy,z,W,H,dpr:Math.min(2,devicePixelRatio||1)};WTRACK.got=0;
+      ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2,H/2);ctx.scale(z,z);ctx.translate(-cx,-cy);
+      try{sc.draw.call(S,ctx,W,H,t,b,n)}catch(e){console.error('wacky',key,e)}ctx.restore();if(SFXMAP[key])cues(S2,t,SFXMAP[key]);requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
   });
