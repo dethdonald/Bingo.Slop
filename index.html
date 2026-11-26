@@ -2288,11 +2288,14 @@ function wackyPlay(n,keyName){
     requestAnimationFrame(frame);
   });
 }
-let lastWacky='',sinceWacky=0;
+let lastWacky='',sinceWacky=4;
 function wackyRoll(){
   if(!st.wacky||reduce)return false;
   sinceWacky++;
-  if(window.__forceWacky||sinceWacky>=10||Math.random()<0.2){sinceWacky=0;return true}
+  if(window.__forceWacky){sinceWacky=0;return true}
+  // never two gags within five balls; always one by the tenth
+  if(sinceWacky<5)return false;
+  if(sinceWacky>=10||Math.random()<0.2){sinceWacky=0;return true}
   return false;
 }
 async function projLand(n,since){
