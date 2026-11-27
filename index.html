@@ -820,7 +820,9 @@ async function callNext(){
   if(n===69&&!projOpen)setTimeout(niceMain,900);
   const id=++callId;
   const shown=projOpen?projShow(n):0;
+  // the chime follows its own switch, so it still plays when the announcer voice is turned off
   if(voiceOn())await announceCall(n);
+  else if(st.chime&&(st.mode==='auto'||st.voice))await chime();
   if(shown)await projLand(n,shown);
   if(id!==callId)return;
   if(running)countdown();
@@ -2572,7 +2574,7 @@ function tumbLoop(now){
 }
 tumbWake();
 // ---- version label, and a quiet check for a newer published version
-const APP_VERSION='v1.46';
+const APP_VERSION='v1.47';
 $('ver').textContent=APP_VERSION;
 async function checkVersion(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();
   if(j&&j.v&&j.v!==APP_VERSION){const b=$('ver');b.classList.add('upd');b.textContent='Update available ('+String(j.v).slice(0,12)+') — tap to refresh';b.onclick=()=>location.reload()}}catch(e){}}
